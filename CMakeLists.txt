@@ -7,8 +7,8 @@ cmake_policy(SET CMP0074 NEW)
 project(dfhack)
 
 # set up versioning.
-set(DF_VERSION "50.09-sdl2-2")
-set(DFHACK_RELEASE "beta1")
+set(DF_VERSION "50.09sdl2-2")
+set(DFHACK_RELEASE "rc1")
 set(DFHACK_PRERELEASE TRUE)
 
 set(DFHACK_VERSION "${DF_VERSION}-${DFHACK_RELEASE}")
@@ -299,11 +299,12 @@ include_directories(${ZLIB_INCLUDE_DIRS})
 # all we need are the header files, so the same release package will work for all platforms
 # (the above statement is untested for OSX)
 set(SDL_VERSION 2.26.2)
+set(SDL_ZIP_MD5 574daf26d48de753d0b1e19823c9d8bb)
 set(SDL_ZIP_FILE SDL2-devel-${SDL_VERSION}-VC.zip)
 set(SDL_ZIP_PATH ${CMAKE_BINARY_DIR}/depends/SDL2/)
 file(DOWNLOAD "https://github.com/libsdl-org/SDL/releases/download/release-${SDL_VERSION}/${SDL_ZIP_FILE}"
     ${SDL_ZIP_PATH}${SDL_ZIP_FILE}
-    EXPECTED_MD5 574daf26d48de753d0b1e19823c9d8bb
+    EXPECTED_MD5 ${SDL_ZIP_MD5}
     SHOW_PROGRESS)
 file(ARCHIVE_EXTRACT INPUT ${SDL_ZIP_PATH}${SDL_ZIP_FILE}
     DESTINATION ${SDL_ZIP_PATH})
