@@ -32,6 +32,7 @@ distribution.
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <variant>
 
 #include "DataDefs.h"
 
@@ -552,8 +553,8 @@ namespace df
 // the space after the use of "type" in OPAQUE_IDENTITY_TRAITS is _required_
 // without it the macro generates a syntax error when type is a template specification
 
-#define OPAQUE_IDENTITY_TRAITS(type) \
-    template<> struct DFHACK_EXPORT identity_traits<type > { \
+#define OPAQUE_IDENTITY_TRAITS(...) \
+    template<> struct DFHACK_EXPORT identity_traits<__VA_ARGS__ > { \
         static opaque_identity identity; \
         static opaque_identity *get() { return &identity; } \
     };
@@ -577,6 +578,7 @@ namespace df
     OPAQUE_IDENTITY_TRAITS(std::future<void>);
     OPAQUE_IDENTITY_TRAITS(std::function<void()>);
     OPAQUE_IDENTITY_TRAITS(std::optional<std::function<void()> >);
+    OPAQUE_IDENTITY_TRAITS(std::variant<std::string, std::function<void()> >);
 
 #ifdef BUILD_DFHACK_LIB
     template<typename T>
