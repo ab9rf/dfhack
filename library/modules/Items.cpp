@@ -2369,7 +2369,7 @@ bool Items::isSquadEquipment(df::item *item)
 
 // reverse engineered, code reference: 0x140953150 in 50.11-win64-steam
 // our name for this function: itemst::getCapacity
-// bay12 name for this function: not known
+// bay12 name for this function: most likely itemst::containercapacity()
 
 int32_t Items::getCapacity(df::item* item)
 {
@@ -2402,9 +2402,9 @@ int32_t Items::getCapacity(df::item* item)
             if (tool)
                 return tool->subtype->container_capacity;
         }
-        // fall through
+        [[fallthrough]];
     default:
-        ; // fall through to default exit
+        [[fallthrough]];
     }
     return 0;
 }
