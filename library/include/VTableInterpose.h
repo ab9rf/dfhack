@@ -99,28 +99,26 @@ namespace DFHack
 #error Unknown compiler type
 #endif
 
-#define ASSERT_METHOD_POINTER(type) \
-    STATIC_ASSERT(df::return_type<type>::is_method && sizeof(type)==METHOD_POINTER_SIZE);
+template <typename type> concept Interposable =
+    df::return_type<type>::is_method &&
+    std::is_polymorphic_v<typename df::return_type<type>::class_type> &&
+    sizeof(type) == METHOD_POINTER_SIZE;
 
     DFHACK_EXPORT bool is_vmethod_pointer_(void*);
     DFHACK_EXPORT int vmethod_pointer_to_idx_(void*);
     DFHACK_EXPORT void* method_pointer_to_addr_(void*);
     DFHACK_EXPORT void addr_to_method_pointer_(void*,void*);
 
-    template<class T> bool is_vmethod_pointer(T ptr) {
-        ASSERT_METHOD_POINTER(T);
+    template<Interposable T> bool is_vmethod_pointer(T ptr) {
         return is_vmethod_pointer_(&ptr);
     }
-    template<class T> int vmethod_pointer_to_idx(T ptr) {
-        ASSERT_METHOD_POINTER(T);
+    template<Interposable T> int vmethod_pointer_to_idx(T ptr) {
         return vmethod_pointer_to_idx_(&ptr);
     }
-    template<class T> void *method_pointer_to_addr(T ptr) {
-        ASSERT_METHOD_POINTER(T);
+    template<Interposable T> void *method_pointer_to_addr(T ptr) {
         return method_pointer_to_addr_(&ptr);
     }
-    template<class T> T addr_to_method_pointer(void *addr) {
-        ASSERT_METHOD_POINTER(T);
+    template<Interposable T> T addr_to_method_pointer(void *addr) {
         T rv;
         addr_to_method_pointer_(&rv, addr);
         return rv;
