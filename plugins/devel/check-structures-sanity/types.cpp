@@ -162,7 +162,7 @@ type_identity *Checker::wrap_in_stl_ptr_vector(type_identity *base)
     {
         return it->second.get();
     }
-    return (wrappers[base] = std::make_unique<df::stl_ptr_vector_identity>(base, nullptr)).get();
+    return (wrappers[base] = std::make_unique<df::stl_ptr_vector_identity>(typeid(std::vector<void*>), base, nullptr)).get();
 }
 
 type_identity *Checker::wrap_in_pointer(type_identity *base)

@@ -305,8 +305,8 @@ namespace df
          * in layout and behavior to std::vector<void*> for any T.
          */
 
-        stl_ptr_vector_identity(type_identity *item = NULL, enum_identity *ienum = NULL)
-            : ptr_container_identity(sizeof(container), typeid(container), allocator_fn<container>, item, ienum)
+        stl_ptr_vector_identity(const std::type_info& id = typeid(std::vector<void*>), type_identity* item = NULL, enum_identity* ienum = NULL)
+            : ptr_container_identity(sizeof(container), typeid(id), allocator_fn<container>, item, ienum)
         {};
 
         std::string getFullName(type_identity *item) {
@@ -346,11 +346,11 @@ namespace df
 
     public:
         buffer_container_identity()
-            : container_identity(0, typeid(char), NULL, NULL, NULL), size(0) // not sure char is appropriate here?
+            : container_identity(0, typeid(char*), NULL, NULL, NULL), size(0) // not sure char is appropriate here?
         {}
 
         buffer_container_identity(int size, const std::type_info& id, type_identity *item, enum_identity *ienum = NULL)
-            : container_identity(0, id, NULL, item, ienum), size(size)
+            : container_identity(size*(item->byte_size()), id, NULL, item, ienum), size(size)
         {}
 
         size_t byte_size() { return getItemType()->byte_size()*size; }
@@ -733,7 +733,7 @@ namespace df
 #ifdef BUILD_DFHACK_LIB
     template<class T, int sz>
     inline container_identity *identity_traits<T [sz]>::get() {
-        static buffer_container_identity identity(sz, typeid(T), identity_traits<T>::get());
+        static buffer_container_identity identity(sz, typeid(T [sz]), identity_traits<T>::get());
         return &identity;
     }
 
@@ -747,7 +747,7 @@ namespace df
 
     template<class T>
     inline stl_ptr_vector_identity *identity_traits<std::vector<T*> >::get() {
-        static stl_ptr_vector_identity identity(identity_traits<T>::get());
+        static stl_ptr_vector_identity identity(typeid(std::vector<T*>), identity_traits<T>::get());
         return &identity;
     }
 

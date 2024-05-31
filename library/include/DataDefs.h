@@ -117,6 +117,8 @@ namespace DFHack
         void *allocate();
         bool copy(void *tgt, const void *src);
         bool destroy(void *obj);
+
+        bool operator==(const type_identity& rhs) const { return id == rhs.id; }
     };
 
     class DFHACK_EXPORT constructed_identity : public type_identity {
@@ -319,9 +321,13 @@ namespace DFHack
     };
 
     class DFHACK_EXPORT global_identity : public struct_identity {
+        // this class exists solely to provide a distinct typeid for this metaobject
+    private:
+        class global_holder {
+        };
     public:
-        global_identity(const struct_field_info *fields)
-            : struct_identity(0,typeid(void), NULL, NULL, "global", NULL, fields) {} // "global" doens't corespond to a well-defined C++ type
+        global_identity(const struct_field_info* fields)
+            : struct_identity(0, typeid(global_holder), NULL, NULL, "global", NULL, fields) {}
 
         virtual identity_type type() { return IDTYPE_GLOBAL; }
 
