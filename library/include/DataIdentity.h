@@ -54,16 +54,14 @@ namespace DFHack
 {
     class DFHACK_EXPORT function_identity_base : public type_identity {
         int num_args;
-        bool vararg;
 
     public:
-        function_identity_base(int num_args, const std::type_info& id, bool vararg = false)
-            : type_identity(0, id), num_args(num_args), vararg(vararg) {};
+        function_identity_base(int num_args, const std::type_info& id)
+            : type_identity(0, id), num_args(num_args) {};
 
         virtual identity_type type() { return IDTYPE_FUNCTION; }
 
         int getNumArgs() { return num_args; }
-        bool adjustArgs() { return vararg; }
 
         std::string getFullName() { return "function"; }
 

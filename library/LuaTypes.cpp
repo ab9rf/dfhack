@@ -1216,10 +1216,7 @@ static int meta_call_function(lua_State *state)
 
 int LuaWrapper::method_wrapper_core(lua_State *state, function_identity_base *id)
 {
-    if (id->adjustArgs())
-        lua_settop(state, id->getNumArgs());
-    else if (lua_gettop(state) != id->getNumArgs())
-        field_error(state, UPVAL_METHOD_NAME, "invalid argument count", "invoke");
+    lua_settop(state, id->getNumArgs());
 
     try {
         id->invoke(state, 1);

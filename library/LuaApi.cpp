@@ -1298,9 +1298,9 @@ static void OpenModule(lua_State *state, const char *mname, const luaL_Reg *reg2
     lua_pop(state, 1);
 }
 
-#define WRAPM(module, function) { #function, df::wrap_function((module::function),true) }
-#define WRAP(function) { #function, df::wrap_function(function,true) }
-#define WRAPN(name, function) { #name, df::wrap_function(function,true) }
+#define WRAPM(module, function) { #function, df::wrap_function(module::function) }
+#define WRAP(function) { #function, df::wrap_function(function) }
+#define WRAPN(name, function) { #name, df::wrap_function(function) }
 #define CWRAP(name, function) { #name, &Lua::CallWithCatchWrapper<function> }
 
 /***** DFHack module *****/
