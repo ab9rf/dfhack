@@ -13,21 +13,11 @@
 #include "DataIdentity.h"
 
 namespace DFHack {
+    struct xlsx_file_handle_identity;
+    struct xlsx_sheet_handle_identity;
 
 // xlsxreader definitions
-struct DFHACK_EXPORT xlsx_file_handle_identity : public compound_identity {
-    xlsx_file_handle_identity()
-        :compound_identity(0, nullptr, nullptr, "xlsx_file_handle") {};
-    DFHack::identity_type type() override { return IDTYPE_OPAQUE; }
-};
-
-struct DFHACK_EXPORT xlsx_sheet_handle_identity : public compound_identity {
-    xlsx_sheet_handle_identity()
-        :compound_identity(0, nullptr, nullptr, "xlsx_sheet_handle") {};
-    DFHack::identity_type type() override { return IDTYPE_OPAQUE; }
-};
-
-struct DFHACK_EXPORT xlsx_file_handle {
+    struct DFHACK_EXPORT xlsx_file_handle {
     const xlsxioreader handle;
     xlsx_file_handle(xlsxioreader handle): handle(handle) {}
     static xlsx_file_handle_identity _identity;
@@ -38,5 +28,18 @@ struct DFHACK_EXPORT xlsx_sheet_handle {
     xlsx_sheet_handle(xlsxioreadersheet handle): handle(handle) {}
     static xlsx_sheet_handle_identity _identity;
 };
+
+struct DFHACK_EXPORT xlsx_file_handle_identity : public compound_identity {
+    xlsx_file_handle_identity()
+        :compound_identity(0, typeid(xlsx_file_handle), nullptr, nullptr, "xlsx_file_handle") {};
+    DFHack::identity_type type() override { return IDTYPE_OPAQUE; }
+};
+
+struct DFHACK_EXPORT xlsx_sheet_handle_identity : public compound_identity {
+    xlsx_sheet_handle_identity()
+        :compound_identity(0, typeid(xlsx_sheet_handle), nullptr, nullptr, "xlsx_sheet_handle") {};
+    DFHack::identity_type type() override { return IDTYPE_OPAQUE; }
+};
+
 
 }

@@ -130,22 +130,23 @@ namespace df {
         };
     };
 
-    template<class T>
+    template<typename T>
     class function_identity : public function_identity_base {
         T ptr;
 
     public:
         using wrapper = function_wrapper<T>;
 
-        function_identity(T ptr, bool vararg)
-            : function_identity_base(wrapper::num_args, vararg), ptr(ptr) {};
+        function_identity(T fn, bool vararg)
+            : function_identity_base(wrapper::num_args, typeid(T), vararg), ptr(fn) {};
 
         virtual void invoke(lua_State *state, int base) { wrapper::execute(state, base, ptr); }
     };
 
-    template<class T>
-    inline function_identity_base *wrap_function(T ptr, bool vararg = false) {
+    template<typename T>
+    inline function_identity_base* wrap_function(T fn, bool vararg = false) {
         // bah, but didn't have any idea how to allocate statically
-        return new function_identity<T>(ptr, vararg);
+        return new function_identity<T>(fn, vararg);
     }
+
 }

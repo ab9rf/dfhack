@@ -57,8 +57,8 @@ namespace DFHack
         bool vararg;
 
     public:
-        function_identity_base(int num_args, bool vararg = false)
-            : type_identity(0), num_args(num_args), vararg(vararg) {};
+        function_identity_base(int num_args, const std::type_info& id, bool vararg = false)
+            : type_identity(0, id), num_args(num_args), vararg(vararg) {};
 
         virtual identity_type type() { return IDTYPE_FUNCTION; }
 
@@ -75,7 +75,7 @@ namespace DFHack
 
     class DFHACK_EXPORT primitive_identity : public type_identity {
     public:
-        primitive_identity(size_t size) : type_identity(size) {};
+        primitive_identity(size_t size, const std::type_info& id) : type_identity(size, id) {};
 
         virtual identity_type type() { return IDTYPE_PRIMITIVE; }
     };
@@ -84,8 +84,8 @@ namespace DFHack
         std::string name;
 
     public:
-        opaque_identity(size_t size, TAllocateFn alloc, const std::string &name)
-          : constructed_identity(size, alloc), name(name) {};
+        opaque_identity(size_t size, const std::type_info& id, TAllocateFn alloc, const std::string &name)
+          : constructed_identity(size, id, alloc), name(name) {};
 
         virtual std::string getFullName() { return name; }
         virtual identity_type type() { return IDTYPE_OPAQUE; }
@@ -95,8 +95,8 @@ namespace DFHack
         type_identity *target;
 
     public:
-        pointer_identity(type_identity *target = NULL)
-            : primitive_identity(sizeof(void*)), target(target) {};
+        pointer_identity(type_identity* target = NULL, const std::type_info& id = typeid(void*))
+            : primitive_identity(sizeof(void*), id), target(target) {};
 
         virtual identity_type type() { return IDTYPE_POINTER; }
 
@@ -116,8 +116,8 @@ namespace DFHack
         enum_identity *ienum;
 
     public:
-        container_identity(size_t size, TAllocateFn alloc, type_identity *item, enum_identity *ienum = NULL)
-            : constructed_identity(size, alloc), item(item), ienum(ienum) {};
+        container_identity(size_t size, const std::type_info& id, TAllocateFn alloc, type_identity *item, enum_identity *ienum = NULL)
+            : constructed_identity(size, id, alloc), item(item), ienum(ienum) {};
 
         virtual identity_type type() { return IDTYPE_CONTAINER; }
 
@@ -156,9 +156,9 @@ namespace DFHack
 
     class DFHACK_EXPORT ptr_container_identity : public container_identity {
     public:
-        ptr_container_identity(size_t size, TAllocateFn alloc,
+        ptr_container_identity(size_t size, const std::type_info& id, TAllocateFn alloc,
                                type_identity *item, enum_identity *ienum = NULL)
-            : container_identity(size, alloc, item, ienum) {};
+            : container_identity(size, id, alloc, item, ienum) {};
 
         virtual identity_type type() { return IDTYPE_PTR_CONTAINER; }
 
@@ -173,8 +173,8 @@ namespace DFHack
 
     class DFHACK_EXPORT bit_container_identity : public container_identity {
     public:
-        bit_container_identity(size_t size, TAllocateFn alloc, enum_identity *ienum = NULL)
-            : container_identity(size, alloc, NULL, ienum) {};
+        bit_container_identity(size_t size, const std::type_info& id, TAllocateFn alloc, enum_identity *ienum = NULL)
+            : container_identity(size, id, alloc, NULL, ienum) {};
 
         virtual identity_type type() { return IDTYPE_BIT_CONTAINER; }
 
@@ -206,8 +206,8 @@ namespace df
         const char *name;
 
     public:
-        number_identity_base(size_t size, const char *name)
-            : primitive_identity(size), name(name) {};
+        number_identity_base(size_t size, const std::type_info& id, const char *name)
+            : primitive_identity(size, id), name(name) {};
 
         std::string getFullName() { return name; }
 
@@ -218,8 +218,8 @@ namespace df
 
     class DFHACK_EXPORT integer_identity_base : public number_identity_base {
     public:
-        integer_identity_base(size_t size, const char *name)
-            : number_identity_base(size, name) {}
+        integer_identity_base(size_t size, const std::type_info& id, const char *name)
+            : number_identity_base(size, id, name) {}
 
         virtual void lua_read(lua_State *state, int fname_idx, void *ptr);
         virtual void lua_write(lua_State *state, int fname_idx, void *ptr, int val_index);
@@ -231,8 +231,8 @@ namespace df
 
     class DFHACK_EXPORT float_identity_base : public number_identity_base {
     public:
-        float_identity_base(size_t size, const char *name)
-            : number_identity_base(size, name) {}
+        float_identity_base(size_t size, const std::type_info& id, const char *name)
+            : number_identity_base(size, id, name) {}
 
         virtual void lua_read(lua_State *state, int fname_idx, void *ptr);
         virtual void lua_write(lua_State *state, int fname_idx, void *ptr, int val_index);
@@ -245,7 +245,7 @@ namespace df
     template<class T>
     class integer_identity : public integer_identity_base {
     public:
-        integer_identity(const char *name) : integer_identity_base(sizeof(T), name) {}
+        integer_identity(const char *name) : integer_identity_base(sizeof(T), typeid(T), name) {}
 
     protected:
         virtual int64_t read(void *ptr) { return int64_t(*(T*)ptr); }
@@ -255,7 +255,7 @@ namespace df
     template<class T>
     class float_identity : public float_identity_base {
     public:
-        float_identity(const char *name) : float_identity_base(sizeof(T), name) {}
+        float_identity(const char *name) : float_identity_base(sizeof(T), typeid(T), name) {}
 
     protected:
         virtual double read(void *ptr) { return double(*(T*)ptr); }
@@ -264,7 +264,7 @@ namespace df
 
     class DFHACK_EXPORT bool_identity : public primitive_identity {
     public:
-        bool_identity() : primitive_identity(sizeof(bool)) {};
+        bool_identity() : primitive_identity(sizeof(bool), typeid(bool)) {};
 
         std::string getFullName() { return "bool"; }
 
@@ -274,7 +274,7 @@ namespace df
 
     class DFHACK_EXPORT ptr_string_identity : public primitive_identity {
     public:
-        ptr_string_identity() : primitive_identity(sizeof(char*)) {};
+        ptr_string_identity() : primitive_identity(sizeof(char*), typeid(char*)) {};
 
         std::string getFullName() { return "char*"; }
 
@@ -285,7 +285,7 @@ namespace df
     class DFHACK_EXPORT stl_string_identity : public DFHack::constructed_identity {
     public:
         stl_string_identity()
-            : constructed_identity(sizeof(std::string), &allocator_fn<std::string>)
+            : constructed_identity(sizeof(std::string), typeid(std::string), & allocator_fn<std::string>)
         {};
 
         std::string getFullName() { return "string"; }
@@ -308,7 +308,7 @@ namespace df
          */
 
         stl_ptr_vector_identity(type_identity *item = NULL, enum_identity *ienum = NULL)
-            : ptr_container_identity(sizeof(container),allocator_fn<container>,item, ienum)
+            : ptr_container_identity(sizeof(container), typeid(container), allocator_fn<container>, item, ienum)
         {};
 
         std::string getFullName(type_identity *item) {
@@ -348,11 +348,11 @@ namespace df
 
     public:
         buffer_container_identity()
-            : container_identity(0, NULL, NULL, NULL), size(0)
+            : container_identity(0, typeid(char), NULL, NULL, NULL), size(0) // not sure char is appropriate here?
         {}
 
-        buffer_container_identity(int size, type_identity *item, enum_identity *ienum = NULL)
-            : container_identity(0, NULL, item, ienum), size(size)
+        buffer_container_identity(int size, const std::type_info& id, type_identity *item, enum_identity *ienum = NULL)
+            : container_identity(0, id, NULL, item, ienum), size(size)
         {}
 
         size_t byte_size() { return getItemType()->byte_size()*size; }
@@ -378,7 +378,7 @@ namespace df
 
     public:
         stl_container_identity(const char *name, type_identity *item, enum_identity *ienum = NULL)
-            : container_identity(sizeof(T), &allocator_fn<T>, item, ienum), name(name)
+            : container_identity(sizeof(T), typeid(T), & allocator_fn<T>, item, ienum), name(name)
         {}
 
         std::string getFullName(type_identity *item) {
@@ -415,7 +415,7 @@ namespace df
 
     public:
         ro_stl_container_identity(const char *name, type_identity *item, enum_identity *ienum = NULL)
-            : container_identity(sizeof(T), &allocator_fn<T>, item, ienum), name(name)
+            : container_identity(sizeof(T), typeid(T), & allocator_fn<T>, item, ienum), name(name)
         {}
 
         std::string getFullName(type_identity *item) {
@@ -470,7 +470,7 @@ namespace df
         typedef BitArray<int> container;
 
         bit_array_identity(enum_identity *ienum = NULL)
-            : bit_container_identity(sizeof(container), &allocator_fn<container>, ienum)
+            : bit_container_identity(sizeof(container), typeid(container), & allocator_fn<container>, ienum)
         {}
 
         std::string getFullName(type_identity *item) {
@@ -500,7 +500,7 @@ namespace df
         typedef std::vector<bool> container;
 
         stl_bit_vector_identity(enum_identity *ienum = NULL)
-            : bit_container_identity(sizeof(container), &allocator_fn<container>, ienum)
+            : bit_container_identity(sizeof(container), typeid(container), & allocator_fn<container>, ienum)
         {}
 
         std::string getFullName(type_identity *item) {
@@ -531,7 +531,7 @@ namespace df
         typedef enum_list_attr<T> container;
 
         enum_list_attr_identity(type_identity *item)
-            : container_identity(sizeof(container), NULL, item, NULL)
+            : container_identity(sizeof(container), typeid(container), NULL, item, NULL)
         {}
 
         std::string getFullName(type_identity *item) {
@@ -597,7 +597,7 @@ namespace df
         static opaque_identity *get() {
             typedef std::shared_ptr<T> type;
             static std::string name = std::string("shared_ptr<") + typeid(T).name() + ">";
-            static opaque_identity identity(sizeof(type), allocator_noassign_fn<type>, name);
+            static opaque_identity identity(sizeof(type), typeid(type), allocator_noassign_fn<type>, name);
             return &identity;
         }
     };
@@ -721,21 +721,21 @@ namespace df
 #ifdef BUILD_DFHACK_LIB
     template<class Enum, class FT>
     inline enum_identity *identity_traits<enum_field<Enum,FT> >::get() {
-        static enum_identity identity(identity_traits<Enum>::get(), identity_traits<FT>::get());
+        static enum_identity identity(identity_traits<Enum>::get(), typeid(Enum), identity_traits<FT>::get());
         return &identity;
     }
 #endif
 
     template<class T>
     inline pointer_identity *identity_traits<T *>::get() {
-        static pointer_identity identity(identity_traits<T>::get());
+        static pointer_identity identity(identity_traits<T>::get(), typeid(T*));
         return &identity;
     }
 
 #ifdef BUILD_DFHACK_LIB
     template<class T, int sz>
     inline container_identity *identity_traits<T [sz]>::get() {
-        static buffer_container_identity identity(sz, identity_traits<T>::get());
+        static buffer_container_identity identity(sz, typeid(T), identity_traits<T>::get());
         return &identity;
     }
 

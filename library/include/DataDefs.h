@@ -78,10 +78,11 @@ namespace DFHack
     typedef void *(*TAllocateFn)(void*,const void*);
 
     class DFHACK_EXPORT type_identity {
-        size_t size;
+        const size_t size;
+        const std::type_info& id;
 
     protected:
-        type_identity(size_t size) : size(size) {};
+        type_identity(size_t size, const std::type_info& id) : size(size), id(id) {};
 
         void *do_allocate_pod();
         void do_copy_pod(void *tgt, const void *src);
@@ -122,8 +123,8 @@ namespace DFHack
         TAllocateFn allocator;
 
     protected:
-        constructed_identity(size_t size, TAllocateFn alloc)
-            : type_identity(size), allocator(alloc) {};
+        constructed_identity(size_t size, const std::type_info& id, TAllocateFn alloc)
+            : type_identity(size, id), allocator(alloc) {};
 
         virtual bool can_allocate() { return (allocator != NULL); }
         virtual void *do_allocate() { return allocator(NULL,NULL); }
@@ -147,7 +148,7 @@ namespace DFHack
         static std::vector<compound_identity*> top_scope;
 
     protected:
-        compound_identity(size_t size, TAllocateFn alloc,
+        compound_identity(size_t size, const std::type_info& id, TAllocateFn alloc,
                           compound_identity *scope_parent, const char *dfhack_name);
 
         virtual void doInit(Core *core);
@@ -186,7 +187,7 @@ namespace DFHack
         virtual bool do_destroy(void *obj) { return do_destroy_pod(obj); }
 
     public:
-        bitfield_identity(size_t size,
+        bitfield_identity(size_t size, const std::type_info& id,
                           compound_identity *scope_parent, const char *dfhack_name,
                           int num_bits, const bitfield_item_info *bits);
 
@@ -232,14 +233,14 @@ namespace DFHack
         virtual bool do_destroy(void *obj) { return do_destroy_pod(obj); }
 
     public:
-        enum_identity(size_t size,
+        enum_identity(size_t size, const std::type_info& id,
                       compound_identity *scope_parent, const char *dfhack_name,
                       type_identity *base_type,
                       int64_t first_item_value, int64_t last_item_value,
                       const char *const *keys,
                       const ComplexData *complex,
                       const void *attrs, struct_identity *attr_type);
-        enum_identity(enum_identity *enum_type, type_identity *override_base_type);
+        enum_identity(enum_identity *enum_type, const std::type_info& id, type_identity *override_base_type);
 
         virtual identity_type type() { return IDTYPE_ENUM; }
 
@@ -300,7 +301,7 @@ namespace DFHack
         virtual void doInit(Core *core);
 
     public:
-        struct_identity(size_t size, TAllocateFn alloc,
+        struct_identity(size_t size, const std::type_info& id, TAllocateFn alloc,
                 compound_identity *scope_parent, const char *dfhack_name,
                 struct_identity *parent, const struct_field_info *fields);
 
@@ -320,7 +321,7 @@ namespace DFHack
     class DFHACK_EXPORT global_identity : public struct_identity {
     public:
         global_identity(const struct_field_info *fields)
-            : struct_identity(0,NULL,NULL,"global",NULL,fields) {}
+            : struct_identity(0,typeid(void), NULL, NULL, "global", NULL, fields) {} // "global" doens't corespond to a well-defined C++ type
 
         virtual identity_type type() { return IDTYPE_GLOBAL; }
 
@@ -329,7 +330,7 @@ namespace DFHack
 
     class DFHACK_EXPORT union_identity : public struct_identity {
     public:
-        union_identity(size_t size, TAllocateFn alloc,
+        union_identity(size_t size, const std::type_info& id, TAllocateFn alloc,
                 compound_identity *scope_parent, const char *dfhack_name,
                 struct_identity *parent, const struct_field_info *fields);
 
@@ -342,11 +343,11 @@ namespace DFHack
         enum_identity *index_enum;
 
     public:
-        other_vectors_identity(size_t size, TAllocateFn alloc,
+        other_vectors_identity(size_t size, const std::type_info& id, TAllocateFn alloc,
                 compound_identity *scope_parent, const char *dfhack_name,
                 struct_identity *parent, const struct_field_info *fields,
                 enum_identity *index_enum) :
-            struct_identity(size, alloc, scope_parent, dfhack_name, parent, fields),
+            struct_identity(size, id, alloc, scope_parent, dfhack_name, parent, fields),
             index_enum(index_enum)
         {}
 
@@ -387,7 +388,7 @@ namespace DFHack
         bool set_vmethod_ptr(MemoryPatcher &patcher, int index, void *ptr);
 
     public:
-        virtual_identity(size_t size, TAllocateFn alloc,
+        virtual_identity(size_t size, const std::type_info& id, TAllocateFn alloc,
                          const char *dfhack_name, const char *original_name,
                          virtual_identity *parent, const struct_field_info *fields,
                          bool is_plugin = false);

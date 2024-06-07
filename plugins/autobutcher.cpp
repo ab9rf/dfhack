@@ -198,7 +198,7 @@ static const struct_field_info autobutcher_options_fields[] = {
     { struct_field_info::PRIMITIVE,      "ticks",     offsetof(autobutcher_options, ticks),     &df::identity_traits<int32_t>::identity, 0, 0 },
     { struct_field_info::END }
 };
-struct_identity autobutcher_options::_identity(sizeof(autobutcher_options), &df::allocator_fn<autobutcher_options>, NULL, "autobutcher_options", NULL, autobutcher_options_fields);
+struct_identity autobutcher_options::_identity(sizeof(autobutcher_options), typeid(autobutcher_options), & df::allocator_fn<autobutcher_options>, NULL, "autobutcher_options", NULL, autobutcher_options_fields);
 
 static bool isHighPriority(df::unit *unit) {
     return Units::isGay(unit) || Units::isGelded(unit);

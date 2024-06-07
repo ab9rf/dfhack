@@ -94,9 +94,9 @@ void *enum_identity::do_allocate() {
 compound_identity *compound_identity::list = NULL;
 std::vector<compound_identity*> compound_identity::top_scope;
 
-compound_identity::compound_identity(size_t size, TAllocateFn alloc,
+compound_identity::compound_identity(size_t size, const std::type_info& id, TAllocateFn alloc,
                                      compound_identity *scope_parent, const char *dfhack_name)
-    : constructed_identity(size, alloc), dfhack_name(dfhack_name), scope_parent(scope_parent)
+    : constructed_identity(size, id, alloc), dfhack_name(dfhack_name), scope_parent(scope_parent)
 {
     next = list; list = this;
 }
@@ -130,21 +130,21 @@ void compound_identity::Init(Core *core)
         p->doInit(core);
 }
 
-bitfield_identity::bitfield_identity(size_t size,
+bitfield_identity::bitfield_identity(size_t size, const std::type_info& id,
                                      compound_identity *scope_parent, const char *dfhack_name,
                                      int num_bits, const bitfield_item_info *bits)
-    : compound_identity(size, NULL, scope_parent, dfhack_name), bits(bits), num_bits(num_bits)
+    : compound_identity(size, id, NULL, scope_parent, dfhack_name), bits(bits), num_bits(num_bits)
 {
 }
 
-enum_identity::enum_identity(size_t size,
+enum_identity::enum_identity(size_t size, const std::type_info& id,
                              compound_identity *scope_parent, const char *dfhack_name,
                              type_identity *base_type,
                              int64_t first_item_value, int64_t last_item_value,
                              const char *const *keys,
                              const ComplexData *complex,
                              const void *attrs, struct_identity *attr_type)
-    : compound_identity(size, NULL, scope_parent, dfhack_name),
+    : compound_identity(size, id, NULL, scope_parent, dfhack_name),
       keys(keys), complex(complex),
       first_item_value(first_item_value), last_item_value(last_item_value),
       base_type(base_type), attrs(attrs), attr_type(attr_type)
@@ -158,8 +158,8 @@ enum_identity::enum_identity(size_t size,
     }
 }
 
-enum_identity::enum_identity(enum_identity *base_enum, type_identity *override_base_type)
-    : enum_identity(override_base_type->byte_size(), base_enum->getScopeParent(),
+enum_identity::enum_identity(enum_identity *base_enum, const std::type_info& id, type_identity *override_base_type)
+    : enum_identity(override_base_type->byte_size(), id, base_enum->getScopeParent(),
                     base_enum->getName(), override_base_type, base_enum->first_item_value,
                     base_enum->last_item_value, base_enum->keys, base_enum->complex,
                     base_enum->attrs, base_enum->attr_type)
@@ -176,10 +176,10 @@ enum_identity::ComplexData::ComplexData(std::initializer_list<int64_t> values)
     }
 }
 
-struct_identity::struct_identity(size_t size, TAllocateFn alloc,
+struct_identity::struct_identity(size_t size, const std::type_info& id, TAllocateFn alloc,
                                  compound_identity *scope_parent, const char *dfhack_name,
                                  struct_identity *parent, const struct_field_info *fields)
-    : compound_identity(size, alloc, scope_parent, dfhack_name),
+    : compound_identity(size, id, alloc, scope_parent, dfhack_name),
       parent(parent), has_children(false), fields(fields)
 {
 }
@@ -231,18 +231,18 @@ std::string df::buffer_container_identity::getFullName(type_identity *item)
            (size > 0 ? stl_sprintf("[%d]", size) : std::string("[]"));
 }
 
-union_identity::union_identity(size_t size, TAllocateFn alloc,
+union_identity::union_identity(size_t size, const std::type_info& id, TAllocateFn alloc,
         compound_identity *scope_parent, const char *dfhack_name,
         struct_identity *parent, const struct_field_info *fields)
-    : struct_identity(size, alloc, scope_parent, dfhack_name, parent, fields)
+    : struct_identity(size, id, alloc, scope_parent, dfhack_name, parent, fields)
 {
 }
 
-virtual_identity::virtual_identity(size_t size, TAllocateFn alloc,
+virtual_identity::virtual_identity(size_t size, const std::type_info& id, TAllocateFn alloc,
                                    const char *dfhack_name, const char *original_name,
                                    virtual_identity *parent, const struct_field_info *fields,
                                    bool is_plugin)
-    : struct_identity(size, alloc, NULL, dfhack_name, parent, fields), original_name(original_name),
+    : struct_identity(size, id, alloc, NULL, dfhack_name, parent, fields), original_name(original_name),
       vtable_ptr(NULL), is_plugin(is_plugin)
 {
     // Plugins are initialized after Init was called, so they need to be added to the name table here
