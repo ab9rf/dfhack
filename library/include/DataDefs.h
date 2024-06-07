@@ -547,18 +547,27 @@ namespace df
         else return new T();
     }
 
-    template<class T>
-    struct identity_traits {
+    template<typename T>
+    concept HasCompoundIdentity = std::is_compound_v<T> &&
+        requires {
+            { &T::_identity } -> std::convertible_to<compound_identity*>;
+    };
+
+    template<typename T>
+    struct identity_traits {};
+
+    template<HasCompoundIdentity T>
+    struct identity_traits<T> {
         static compound_identity *get() { return &T::_identity; }
     };
 
-    template<class T>
+    template<typename T>
     inline T* allocate() { return (T*)identity_traits<T>::get()->allocate(); }
 
-    template<class T>
+    template<typename T>
     struct enum_traits {};
 
-    template<class T>
+    template<typename T>
     struct bitfield_traits {};
 
     template<class EnumType, class IntType = int32_t>
