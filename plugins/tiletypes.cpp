@@ -74,6 +74,11 @@ static const struct_field_info tiletypes_options_fields[] = {
     { struct_field_info::END }
 };
 struct_identity tiletypes_options::_identity(sizeof(tiletypes_options), typeid(tiletypes_options), & df::allocator_fn<tiletypes_options>, NULL, "tiletypes_options", NULL, tiletypes_options_fields);
+// pair<bottomShape, topShape> -> newTopShape
+static const std::map<std::pair<df::tiletype_shape, df::tiletype_shape>, df::tiletype_shape> surroundingsMap = {
+    { { df::tiletype_shape::WALL, df::tiletype_shape::EMPTY    }, df::tiletype_shape::FLOOR    },
+    { { df::tiletype_shape::RAMP, df::tiletype_shape::EMPTY    }, df::tiletype_shape::RAMP_TOP },
+};
 
 static const char * HISTORY_FILE = "dfhack-config/tiletypes.history";
 CommandHistory tiletypes_hist;
