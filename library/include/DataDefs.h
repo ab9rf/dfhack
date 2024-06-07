@@ -45,6 +45,11 @@ typedef struct lua_State lua_State;
  * Definitions of DFHack namespace structs used by generated headers.
  */
 
+ // forward def'n
+namespace df {
+    template<class T> void* allocator_fn(void* out, const void* in);
+}
+
 namespace DFHack
 {
     class Core;
@@ -121,11 +126,11 @@ namespace DFHack
         bool operator==(const type_identity& rhs) const { return id == rhs.id; }
     };
 
-    class DFHACK_EXPORT constructed_identity : public type_identity {
+    class DFHACK_EXPORT constructed_identity_base : public type_identity {
         TAllocateFn allocator;
 
     protected:
-        constructed_identity(size_t size, const std::type_info& id, TAllocateFn alloc)
+        constructed_identity_base(size_t size, const std::type_info& id, TAllocateFn alloc)
             : type_identity(size, id), allocator(alloc) {};
 
         virtual bool can_allocate() { return (allocator != NULL); }
@@ -140,18 +145,18 @@ namespace DFHack
         virtual void lua_write(lua_State *state, int fname_idx, void *ptr, int val_index);
     };
 
-    class DFHACK_EXPORT compound_identity : public constructed_identity {
-        static compound_identity *list;
-        compound_identity *next;
+    class DFHACK_EXPORT compound_identity_base : public constructed_identity_base {
+        static compound_identity_base *list;
+        compound_identity_base *next;
 
         const char *dfhack_name;
-        compound_identity *scope_parent;
-        std::vector<compound_identity*> scope_children;
-        static std::vector<compound_identity*> top_scope;
+        compound_identity_base *scope_parent;
+        std::vector<compound_identity_base*> scope_children;
+        static std::vector<compound_identity_base*> top_scope;
 
     protected:
-        compound_identity(size_t size, const std::type_info& id, TAllocateFn alloc,
-                          compound_identity *scope_parent, const char *dfhack_name);
+        compound_identity_base(size_t size, const std::type_info& id, TAllocateFn alloc,
+                          compound_identity_base *scope_parent, const char *dfhack_name);
 
         virtual void doInit(Core *core);
 
@@ -160,11 +165,23 @@ namespace DFHack
 
         virtual std::string getFullName();
 
-        compound_identity *getScopeParent() { return scope_parent; }
-        const std::vector<compound_identity*> &getScopeChildren() { return scope_children; }
-        static const std::vector<compound_identity*> &getTopScope() { return top_scope; }
+        compound_identity_base *getScopeParent() { return scope_parent; }
+        const std::vector<compound_identity_base*> &getScopeChildren() { return scope_children; }
+        static const std::vector<compound_identity_base*> &getTopScope() { return top_scope; }
 
         static void Init(Core *core);
+    };
+
+    template<typename T>
+    class DFHACK_EXPORT constructed_identity : public constructed_identity_base {
+    protected:
+        constructed_identity() : constructed_identity_base(sizeof(T), typeid(T), &df::allocator_fn<T>) {};
+    };
+
+    template<typename T>
+    class DFHACK_EXPORT compound_identity : public compound_identity_base {
+    protected:
+        compound_identity(compound_identity_base* scope_parent, const char* dfhack_name) : compound_identity_base(sizeof(T), typeid(T), &df::allocator_fn, scope_parent, dfhack_name) {};
     };
 
     // Bitfields
@@ -178,7 +195,7 @@ namespace DFHack
         int size;
     };
 
-    class DFHACK_EXPORT bitfield_identity : public compound_identity {
+    class DFHACK_EXPORT bitfield_identity : public compound_identity_base {
         const bitfield_item_info *bits;
         int num_bits;
 
@@ -190,7 +207,7 @@ namespace DFHack
 
     public:
         bitfield_identity(size_t size, const std::type_info& id,
-                          compound_identity *scope_parent, const char *dfhack_name,
+                          compound_identity_base *scope_parent, const char *dfhack_name,
                           int num_bits, const bitfield_item_info *bits);
 
         virtual identity_type type() { return IDTYPE_BITFIELD; }
@@ -205,7 +222,7 @@ namespace DFHack
 
     class struct_identity;
 
-    class DFHACK_EXPORT enum_identity : public compound_identity {
+    class DFHACK_EXPORT enum_identity : public compound_identity_base {
     public:
         struct ComplexData {
             std::map<int64_t, size_t> value_index_map;
@@ -236,7 +253,7 @@ namespace DFHack
 
     public:
         enum_identity(size_t size, const std::type_info& id,
-                      compound_identity *scope_parent, const char *dfhack_name,
+                      compound_identity_base *scope_parent, const char *dfhack_name,
                       type_identity *base_type,
                       int64_t first_item_value, int64_t last_item_value,
                       const char *const *keys,
@@ -292,7 +309,7 @@ namespace DFHack
         const struct_field_info_extra *extra;
     };
 
-    class DFHACK_EXPORT struct_identity : public compound_identity {
+    class DFHACK_EXPORT struct_identity : public compound_identity_base {
         struct_identity *parent;
         std::vector<struct_identity*> children;
         bool has_children;
@@ -304,7 +321,7 @@ namespace DFHack
 
     public:
         struct_identity(size_t size, const std::type_info& id, TAllocateFn alloc,
-                compound_identity *scope_parent, const char *dfhack_name,
+                compound_identity_base *scope_parent, const char *dfhack_name,
                 struct_identity *parent, const struct_field_info *fields);
 
         virtual identity_type type() { return IDTYPE_STRUCT; }
@@ -337,7 +354,7 @@ namespace DFHack
     class DFHACK_EXPORT union_identity : public struct_identity {
     public:
         union_identity(size_t size, const std::type_info& id, TAllocateFn alloc,
-                compound_identity *scope_parent, const char *dfhack_name,
+                compound_identity_base *scope_parent, const char *dfhack_name,
                 struct_identity *parent, const struct_field_info *fields);
 
         virtual identity_type type() { return IDTYPE_UNION; }
@@ -350,7 +367,7 @@ namespace DFHack
 
     public:
         other_vectors_identity(size_t size, const std::type_info& id, TAllocateFn alloc,
-                compound_identity *scope_parent, const char *dfhack_name,
+                compound_identity_base *scope_parent, const char *dfhack_name,
                 struct_identity *parent, const struct_field_info *fields,
                 enum_identity *index_enum) :
             struct_identity(size, id, alloc, scope_parent, dfhack_name, parent, fields),
@@ -486,7 +503,7 @@ inline int linear_index(const DFHack::enum_list_attr<const char*> &lst, const st
 namespace df
 {
     using DFHack::type_identity;
-    using DFHack::compound_identity;
+    using DFHack::compound_identity_base;
     using DFHack::virtual_ptr;
     using DFHack::virtual_identity;
     using DFHack::virtual_class;
@@ -552,11 +569,11 @@ namespace df
     struct bitfield_traits {};
 
     template<class T>
-    concept HasCompoundIdentity = std::is_compound_v<T> && requires { { &T::_identity } -> std::convertible_to<compound_identity*>; };
+    concept HasCompoundIdentity = std::is_compound_v<T> && requires { { &T::_identity } -> std::convertible_to<compound_identity_base*>; };
 
     template<HasCompoundIdentity T>
     struct identity_traits<T> {
-        static compound_identity* get() { return &T::_identity; }
+        static compound_identity_base* get() { return &T::_identity; }
     };
 
     template<class T>

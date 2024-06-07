@@ -272,8 +272,8 @@ bool LuaWrapper::is_type_compatible(lua_State *state, type_identity *type1, int 
     {
     case IDTYPE_POINTER:
         return is_type_compatible(state,
-                                  ((pointer_identity*)type1)->getTarget(), 0,
-                                  ((pointer_identity*)type2)->getTarget(), 0,
+                                  ((pointer_identity_base*)type1)->getTarget(), 0,
+                                  ((pointer_identity_base*)type2)->getTarget(), 0,
                                   exact_equal);
         break;
 
@@ -1018,12 +1018,12 @@ static int meta_ptr_tostring(lua_State *state)
 
     bool has_length = false;
     uint64_t length = 0;
-    auto *cid = dynamic_cast<df::container_identity*>(get_object_identity(state, 1, "__tostring()", true, true));
+    auto *cid = dynamic_cast<df::container_identity_base*>(get_object_identity(state, 1, "__tostring()", true, true));
 
     if (cid && (cid->type() == IDTYPE_CONTAINER || cid->type() == IDTYPE_STL_PTR_VECTOR))
     {
         has_length = true;
-        length = cid->lua_item_count(state, ptr, container_identity::COUNT_LEN);
+        length = cid->lua_item_count(state, ptr, container_identity_base::COUNT_LEN);
     }
 
     lua_getfield(state, UPVAL_METATABLE, "__metatable");
@@ -1445,7 +1445,7 @@ static int complex_enum_ipairs(lua_State *L)
 }
 
 
-static void RenderTypeChildren(lua_State *state, const std::vector<compound_identity*> &children);
+static void RenderTypeChildren(lua_State *state, const std::vector<compound_identity_base*> &children);
 
 void LuaWrapper::AssociateId(lua_State *state, int table, int val, const char *name)
 {
@@ -1587,7 +1587,7 @@ static void FillBitfieldKeys(lua_State *state, int ix_meta, int ftable, bitfield
     lua_setmetatable(state, ftable);
 }
 
-static void RenderType(lua_State *state, compound_identity *node)
+static void RenderType(lua_State *state, compound_identity_base *node)
 {
     assert(node->getName());
     std::string name = node->getFullName();
@@ -1709,7 +1709,7 @@ static void RenderType(lua_State *state, compound_identity *node)
     base += 1;
 }
 
-static void RenderTypeChildren(lua_State *state, const std::vector<compound_identity*> &children)
+static void RenderTypeChildren(lua_State *state, const std::vector<compound_identity_base*> &children)
 {
     // fieldtable pairstable |
     int base = lua_gettop(state);
@@ -1785,7 +1785,7 @@ static int DoAttach(lua_State *state)
         lua_newtable(state);
 
         // Render the type structure
-        RenderTypeChildren(state, compound_identity::getTopScope());
+        RenderTypeChildren(state, compound_identity_base::getTopScope());
 
         lua_swap(state); // -> pairstable fieldtable
 

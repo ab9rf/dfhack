@@ -19,7 +19,7 @@ namespace df {
 #define INTEGER_IDENTITY_TRAITS(type, name) NUMBER_IDENTITY_TRAITS(integer, type, name)
 #define FLOAT_IDENTITY_TRAITS(type) NUMBER_IDENTITY_TRAITS(float, type, #type)
 #define OPAQUE_IDENTITY_TRAITS_NAME(name, ...) \
-    opaque_identity identity_traits<__VA_ARGS__ >::identity(sizeof(__VA_ARGS__), typeid(__VA_ARGS__), allocator_noassign_fn<__VA_ARGS__ >, name)
+    opaque_identity<__VA_ARGS__ > identity_traits<__VA_ARGS__ >::identity(name)
 #define OPAQUE_IDENTITY_TRAITS(...) OPAQUE_IDENTITY_TRAITS_NAME(#__VA_ARGS__, __VA_ARGS__ )
 
     INTEGER_IDENTITY_TRAITS(char,               "char");
@@ -40,10 +40,12 @@ namespace df {
     stl_string_identity identity_traits<std::string>::identity;
     ptr_string_identity identity_traits<char*>::identity;
     ptr_string_identity identity_traits<const char*>::identity;
-    pointer_identity identity_traits<void*>::identity;
+    pointer_identity<void*> identity_traits<void*>::identity;
     stl_ptr_vector_identity identity_traits<std::vector<void*> >::identity;
     stl_bit_vector_identity identity_traits<std::vector<bool> >::identity;
     bit_array_identity identity_traits<BitArray<int> >::identity;
+
+    OPAQUE_IDENTITY_TRAITS(void);
 
     OPAQUE_IDENTITY_TRAITS(std::condition_variable);
     OPAQUE_IDENTITY_TRAITS(std::fstream);

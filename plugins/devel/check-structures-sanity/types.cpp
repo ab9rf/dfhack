@@ -122,7 +122,7 @@ bool CheckedStructure::has_type_at_offset(const CheckedStructure & type, size_t 
 
     if (identity->type() == IDTYPE_BUFFER)
     {
-        auto target = static_cast<container_identity *>(identity)->getItemType();
+        auto target = static_cast<container_identity_base *>(identity)->getItemType();
         return CheckedStructure(target, 0).has_type_at_offset(type, offset % target->byte_size());
     }
 
@@ -167,19 +167,19 @@ type_identity *Checker::wrap_in_stl_ptr_vector(type_identity *base)
 
 type_identity *Checker::wrap_in_pointer(type_identity *base)
 {
-    static std::map<type_identity *, std::unique_ptr<df::pointer_identity>> wrappers;
+    static std::map<type_identity *, std::unique_ptr<df::pointer_identity_base>> wrappers;
     auto it = wrappers.find(base);
     if (it != wrappers.end())
     {
         return it->second.get();
     }
-    return (wrappers[base] = std::make_unique<df::pointer_identity>(base)).get();
+    return (wrappers[base] = std::make_unique<df::pointer_identity_base>(base)).get();
 }
 
 std::map<size_t, std::vector<std::string>> known_types_by_size;
 void build_size_table()
 {
-    for (auto & ident : compound_identity::getTopScope())
+    for (auto & ident : compound_identity_base::getTopScope())
     {
         if (ident->byte_size() >= MIN_SIZE_FOR_SUGGEST)
         {
