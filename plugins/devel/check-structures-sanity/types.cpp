@@ -18,11 +18,11 @@ CheckedStructure::CheckedStructure() :
     CheckedStructure(nullptr, 0)
 {
 }
-CheckedStructure::CheckedStructure(type_identity *identity, size_t count) :
+CheckedStructure::CheckedStructure(const type_identity *identity, size_t count) :
     CheckedStructure(identity, count, nullptr, false)
 {
 }
-CheckedStructure::CheckedStructure(type_identity *identity, size_t count, enum_identity *eid, bool inside_structure) :
+CheckedStructure::CheckedStructure(const type_identity *identity, size_t count, const enum_identity_base *eid, bool inside_structure) :
     identity(identity),
     count(count),
     allocated_count(0),
@@ -122,11 +122,11 @@ bool CheckedStructure::has_type_at_offset(const CheckedStructure & type, size_t 
 
     if (identity->type() == IDTYPE_BUFFER)
     {
-        auto target = static_cast<container_identity_base *>(identity)->getItemType();
+        auto target = static_cast<const container_identity_base *>(identity)->getItemType();
         return CheckedStructure(target, 0).has_type_at_offset(type, offset % target->byte_size());
     }
 
-    auto st = dynamic_cast<struct_identity *>(identity);
+    auto st = dynamic_cast<const struct_identity_base *>(identity);
     if (!st)
     {
         return false;
@@ -154,9 +154,9 @@ bool CheckedStructure::has_type_at_offset(const CheckedStructure & type, size_t 
     return false;
 }
 
-type_identity *Checker::wrap_in_stl_ptr_vector(type_identity *base)
+const type_identity *Checker::wrap_in_stl_ptr_vector(const type_identity *base)
 {
-    static std::map<type_identity *, std::unique_ptr<df::stl_ptr_vector_identity>> wrappers;
+    static std::map<const type_identity *, std::unique_ptr<const df::stl_ptr_vector_identity>> wrappers;
     auto it = wrappers.find(base);
     if (it != wrappers.end())
     {
@@ -165,9 +165,9 @@ type_identity *Checker::wrap_in_stl_ptr_vector(type_identity *base)
     return (wrappers[base] = std::make_unique<df::stl_ptr_vector_identity>(typeid(std::vector<void*>), base, nullptr)).get();
 }
 
-type_identity *Checker::wrap_in_pointer(type_identity *base)
+const type_identity *Checker::wrap_in_pointer(const type_identity *base)
 {
-    static std::map<type_identity *, std::unique_ptr<df::pointer_identity_base>> wrappers;
+    static std::map<const type_identity *, std::unique_ptr<const df::pointer_identity_base>> wrappers;
     auto it = wrappers.find(base);
     if (it != wrappers.end())
     {

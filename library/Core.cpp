@@ -1648,7 +1648,7 @@ bool Core::InitSimulationThread()
     }
     */
     // initialize data defs
-    virtual_identity::Init(this);
+    virtual_identity_base::Init(this);
 
     // create config directory if it doesn't already exist
     if (!Filesystem::mkdir_recursive(CONFIG_PATH))

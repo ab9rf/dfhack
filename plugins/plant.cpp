@@ -88,7 +88,7 @@ struct plant_options
     int32_t plant_idx = -1; // Plant raw index of plant to create; -2 means print all non-grass IDs
     int32_t age = -1; // Set plant to this age for grow/create; -1 for default
 
-    static struct_identity _identity;
+    static struct_identity<plant_options> _identity;
 };
 static const struct_field_info plant_options_fields[] =
 {
@@ -107,7 +107,7 @@ static const struct_field_info plant_options_fields[] =
     { struct_field_info::PRIMITIVE, "age",       offsetof(plant_options, age),       &df::identity_traits<int32_t>::identity, 0, 0 },
     { struct_field_info::END }
 };
-struct_identity plant_options::_identity(sizeof(plant_options), typeid(plant_options), & df::allocator_fn<plant_options>, NULL, "plant_options", NULL, plant_options_fields);
+struct_identity<plant_options> plant_options::_identity(NULL, "plant_options", NULL, plant_options_fields);
 
 const int32_t sapling_to_tree_threshold = 120 * 28 * 12 * 3 - 1; // 3 years minus 1; let the game handle the actual growing-up
 

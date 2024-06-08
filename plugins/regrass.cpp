@@ -45,7 +45,7 @@ struct regrass_options
 
     int32_t forced_plant = -1; // Plant raw index of grass to force; -2 means print all ids
 
-    static struct_identity _identity;
+    static struct_identity<regrass_options> _identity;
 };
 static const struct_field_info regrass_options_fields[] =
 {
@@ -60,7 +60,7 @@ static const struct_field_info regrass_options_fields[] =
     { struct_field_info::PRIMITIVE, "forced_plant", offsetof(regrass_options, forced_plant), &df::identity_traits<int32_t>::identity, 0, 0 },
     { struct_field_info::END }
 };
-struct_identity regrass_options::_identity(sizeof(regrass_options), typeid(regrass_options), & df::allocator_fn<regrass_options>, NULL, "regrass_options", NULL, regrass_options_fields);
+struct_identity<regrass_options> regrass_options::_identity(NULL, "regrass_options", NULL, regrass_options_fields);
 
 command_result df_regrass(color_ostream &out, vector<string> &parameters);
 

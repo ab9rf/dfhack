@@ -140,7 +140,7 @@ namespace df {
         function_identity(T fn)
             : function_identity_base(wrapper::num_args, typeid(T)), ptr(fn) {};
 
-        virtual void invoke(lua_State *state, int base) { wrapper::execute(state, base, ptr); }
+        virtual void invoke(lua_State *state, int base) const { wrapper::execute(state, base, ptr); }
     };
 
     template<typename T>

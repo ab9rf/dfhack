@@ -165,7 +165,7 @@ struct boulder_percent_options {
     boulder_percent_options() :
             layer(25), vein(33), small_cluster(100), deep(100) { }
 
-    static struct_identity _identity;
+    static struct_identity<boulder_percent_options> _identity;
 };
 static const struct_field_info boulder_percent_options_fields[] = {
     { struct_field_info::PRIMITIVE, "layer",         offsetof(boulder_percent_options, layer),         &df::identity_traits<uint32_t>::identity, 0, 0 },
@@ -174,7 +174,7 @@ static const struct_field_info boulder_percent_options_fields[] = {
     { struct_field_info::PRIMITIVE, "deep",          offsetof(boulder_percent_options, deep),          &df::identity_traits<uint32_t>::identity, 0, 0 },
     { struct_field_info::END }
 };
-struct_identity boulder_percent_options::_identity(sizeof(boulder_percent_options), typeid(boulder_percent_options), & df::allocator_fn<boulder_percent_options>, NULL, "boulder_percents", NULL, boulder_percent_options_fields);
+struct_identity<boulder_percent_options> boulder_percent_options::_identity(NULL, "boulder_percents", NULL, boulder_percent_options_fields);
 
 struct dig_now_options {
     bool help; // whether to show the short help
@@ -197,7 +197,7 @@ struct dig_now_options {
 
     dig_now_options() : help(false), start(0, 0, 0), end(getMapSize()) { }
 
-    static struct_identity _identity;
+    static struct_identity<dig_now_options> _identity;
 };
 static const struct_field_info dig_now_options_fields[] = {
     { struct_field_info::PRIMITIVE, "help",             offsetof(dig_now_options, help),             &df::identity_traits<bool>::identity, 0, 0 },
@@ -207,7 +207,7 @@ static const struct_field_info dig_now_options_fields[] = {
     { struct_field_info::SUBSTRUCT, "dump_pos",         offsetof(dig_now_options, dump_pos),         &df::coord::_identity,                0, 0 },
     { struct_field_info::END }
 };
-struct_identity dig_now_options::_identity(sizeof(dig_now_options), typeid(dig_now_options), & df::allocator_fn<dig_now_options>, NULL, "dig_now_options", NULL, dig_now_options_fields);
+struct_identity<dig_now_options> dig_now_options::_identity(NULL, "dig_now_options", NULL, dig_now_options_fields);
 
 // propagate light, outside, and subterranean flags to open tiles below this one
 static void propagate_vertical_flags(MapExtras::MapCache &map,

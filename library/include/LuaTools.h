@@ -112,32 +112,32 @@ namespace DFHack {namespace Lua {
     /**
      * Push the pointer onto the stack as a wrapped DF object of the given type.
      */
-    DFHACK_EXPORT void PushDFObject(lua_State *state, type_identity *type, void *ptr);
+    DFHACK_EXPORT void PushDFObject(lua_State *state, const type_identity *type, void *ptr);
 
     /**
      * Check that the value is a wrapped DF object of the given type, and if so return the pointer.
      */
-    DFHACK_EXPORT void *GetDFObject(lua_State *state, type_identity *type, int val_index, bool exact_type = false);
+    DFHACK_EXPORT void *GetDFObject(lua_State *state, const type_identity *type, int val_index, bool exact_type = false);
 
     /**
      * Check that the value is a wrapped DF object of the given type, and if so return the pointer.
      * Otherwise throw an argument type error.
      */
-    DFHACK_EXPORT void *CheckDFObject(lua_State *state, type_identity *type, int val_index, bool exact_type = false);
+    DFHACK_EXPORT void *CheckDFObject(lua_State *state, const type_identity *type, int val_index, bool exact_type = false);
 
     /**
      * Assign the value at val_index to the target of given identity using df.assign().
      * Return behavior is of SafeCall below.
      */
     DFHACK_EXPORT bool AssignDFObject(color_ostream &out, lua_State *state,
-                                      type_identity *type, void *target, int val_index,
+                                      const type_identity *type, void *target, int val_index,
                                       bool exact_type = false, bool perr = true);
 
     /**
      * Assign the value at val_index to the target of given identity using df.assign().
      * Otherwise throws an error.
      */
-    DFHACK_EXPORT void CheckDFAssign(lua_State *state, type_identity *type,
+    DFHACK_EXPORT void CheckDFAssign(lua_State *state, const type_identity *type,
                                      void *target, int val_index, bool exact_type = false);
 
     /**

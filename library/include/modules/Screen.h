@@ -368,7 +368,7 @@ namespace DFHack
         virtual df::building_civzonest *getSelectedCivZone() { return nullptr; }
         virtual df::plant *getSelectedPlant() { return nullptr; }
 
-        static virtual_identity _identity;
+        static virtual_identity<dfhack_viewscreen> _identity;
     };
 
     class DFHACK_EXPORT dfhack_lua_viewscreen : public dfhack_viewscreen {
@@ -415,7 +415,7 @@ namespace DFHack
         virtual df::building_stockpilest *getSelectedStockpile();
         virtual df::plant *getSelectedPlant();
 
-        static virtual_identity _identity;
+        static virtual_identity<dfhack_lua_viewscreen> _identity;
     };
 
 }

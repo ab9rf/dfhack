@@ -46,7 +46,7 @@ namespace DFHack
 {
     class Core;
     class PluginManager;
-    class virtual_identity;
+    class virtual_identity_base;
     class RPCService;
     class function_identity_base;
     namespace Lua {

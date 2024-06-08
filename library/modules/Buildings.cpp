@@ -504,7 +504,7 @@ df::building *Buildings::allocInstance(df::coord pos, df::building_type type, in
     if (!classname)
         return NULL;
 
-    auto id = virtual_identity::find(classname);
+    auto id = virtual_identity_base::find(classname);
     if (!id)
         return NULL;
 

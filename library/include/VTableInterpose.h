@@ -129,10 +129,10 @@ namespace DFHack
     /* Access to vmethod pointers from the vtable. */
 
     template<class P>
-    P virtual_identity::get_vmethod_ptr(P selector)
+    P virtual_identity_base::get_vmethod_ptr(P selector)
     {
         typedef typename df::return_type<P>::class_type host_class;
-        virtual_identity &identity = host_class::_identity;
+        virtual_identity_base &identity = host_class::_identity;
         int idx = vmethod_pointer_to_idx(selector);
         return addr_to_method_pointer<P>(identity.get_vmethod_ptr(idx));
     }
@@ -158,9 +158,9 @@ namespace DFHack
           1) Allow multiple hooks into the same vmethod
           2) Auto-remove hooks when a plugin is unloaded.
         */
-        friend class virtual_identity;
+        friend class virtual_identity_base;
 
-        virtual_identity *host; // Class with the vtable
+        const virtual_identity_base *host; // Class with the vtable
         int vmethod_idx;        // Index of the interposed method in the vtable
         void *interpose_method; // Pointer to the code of the interposing method
         void *chain_mptr;       // Pointer to the chain field in the subclass below
@@ -173,18 +173,18 @@ namespace DFHack
         // Chain of hooks within the same host
         VMethodInterposeLinkBase *next, *prev;
         // Subclasses that inherit this topmost hook directly
-        std::set<virtual_identity*> child_hosts;
+        std::set<const virtual_identity_base*> child_hosts;
         // Hooks within subclasses that branch off this topmost hook
         std::set<VMethodInterposeLinkBase*> child_next;
         // (See the cpp file for a more detailed description of these links)
 
         void set_chain(void *chain);
-        void on_host_delete(virtual_identity *host);
+        void on_host_delete(const virtual_identity_base *host);
 
-        VMethodInterposeLinkBase *get_first_interpose(virtual_identity *id);
-        bool find_child_hosts(virtual_identity *cur, void *vmptr);
+        VMethodInterposeLinkBase *get_first_interpose(const virtual_identity_base *id);
+        bool find_child_hosts(const virtual_identity_base *cur, void *vmptr);
     public:
-        VMethodInterposeLinkBase(virtual_identity *host, int vmethod_idx, void *interpose_method, void *chain_mptr, int priority, const char *name);
+        VMethodInterposeLinkBase(const virtual_identity_base *host, int vmethod_idx, void *interpose_method, void *chain_mptr, int priority, const char *name);
         ~VMethodInterposeLinkBase();
 
         bool is_applied() { return applied; }
