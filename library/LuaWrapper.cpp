@@ -28,6 +28,7 @@ distribution.
 #include <vector>
 #include <map>
 #include <cinttypes>
+#include <typeindex>
 
 #include "MemAccess.h"
 #include "Core.h"
@@ -1135,6 +1136,38 @@ static int meta_pairs(lua_State *state)
     return 3;
 }
 
+struct identity_hashcomp
+{
+    using T = const DFHack::type_identity*;
+
+    std::size_t operator()(const T t) const noexcept
+    {
+        return t->get_typeid().hash_code();
+    }
+    bool operator() (const T& lhs, const T& rhs) const
+    {
+        return (*lhs) == (*rhs);
+    }
+};
+
+static std::unordered_map<const type_identity*, std::unique_ptr<const type_identity>, identity_hashcomp, identity_hashcomp> canonical_map{};
+
+const type_identity* canonicalize_type_identity (const type_identity* type)
+{
+    auto item = canonical_map.find(type);
+    if (item == canonical_map.end())
+    {
+        auto copy = type->clone();
+        type = copy.get();
+        canonical_map[type] = std::move(copy);
+        return type;
+    }
+    else
+    {
+        return item->second.get();
+    }
+}
+
 /**
  * Make a metatable with most common fields, and an empty table for UPVAL_FIELDTABLE.
  */
@@ -1142,6 +1175,8 @@ void LuaWrapper::MakeMetatable(lua_State *state, const type_identity *type, cons
 {
     int base = lua_gettop(state);
     lua_newtable(state); // metatable
+
+    type = canonicalize_type_identity(type);
 
     lua_pushstring(state, type->getFullName().c_str());
     lua_setfield(state, base+1, "__metatable");

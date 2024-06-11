@@ -226,7 +226,7 @@ namespace LuaWrapper {
      * Push a closure invoking the given function.
      */
     void PushFunctionWrapper(lua_State *state, int meta_idx,
-                             const char *name, function_identity_base *fun);
+                             const char *name, const function_identity_base *fun);
 
     /**
      * Wrap functions and add them to the table on the top of the stack.
@@ -234,7 +234,7 @@ namespace LuaWrapper {
     typedef DFHack::FunctionReg FunctionReg;
     void SetFunctionWrappers(lua_State *state, const FunctionReg *reg);
 
-    int method_wrapper_core(lua_State *state, function_identity_base *id);
+    int method_wrapper_core(lua_State *state, const function_identity_base *id);
 
     void IndexStatics(lua_State *state, int meta_idx, int ftable_idx, struct_identity *pstruct);
 

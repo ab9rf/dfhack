@@ -34,12 +34,18 @@ namespace DFHack {
     struct DFHACK_EXPORT xlsx_file_handle_identity : public compound_identity {
     xlsx_file_handle_identity()
         :compound_identity(typeid(xlsx_file_handle), 0, nullptr, nullptr, "xlsx_file_handle") {};
+    std::unique_ptr<const type_identity> clone() const {
+        return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+    }
     DFHack::identity_type type() const override { return IDTYPE_OPAQUE; }
 };
 
 struct DFHACK_EXPORT xlsx_sheet_handle_identity : public compound_identity {
     xlsx_sheet_handle_identity()
         :compound_identity(typeid(xlsx_sheet_handle), 0, nullptr, nullptr, "xlsx_sheet_handle") {};
+    std::unique_ptr<const type_identity> clone() const {
+        return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+    }
     DFHack::identity_type type() const override { return IDTYPE_OPAQUE; }
 };
 

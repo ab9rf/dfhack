@@ -95,8 +95,11 @@ namespace DFHack
 
     public:
         virtual ~type_identity() {}
+        virtual std::unique_ptr<const type_identity> clone() const = 0;
 
         virtual size_t byte_size() const { return size; }
+
+        virtual bool operator==(const type_identity& other) const { return id == other.id; }
 
         virtual identity_type type() const = 0;
 
@@ -138,6 +141,7 @@ namespace DFHack
 
         virtual void lua_read(lua_State *state, int fname_idx, void *ptr) const;
         virtual void lua_write(lua_State *state, int fname_idx, void *ptr, int val_index) const;
+
     };
 
     class DFHACK_EXPORT compound_identity : public constructed_identity {
@@ -192,6 +196,9 @@ namespace DFHack
         bitfield_identity(const std::type_info& id, size_t size,
             const compound_identity *scope_parent, const char *dfhack_name,
                           int num_bits, const bitfield_item_info *bits);
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
         virtual identity_type type() const { return IDTYPE_BITFIELD; }
 
@@ -215,6 +222,10 @@ namespace DFHack
                 return index_value_map.size();
             }
         };
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
+
 
     private:
         const char *const *keys;
@@ -307,6 +318,10 @@ namespace DFHack
             const compound_identity *scope_parent, const char *dfhack_name,
             const struct_identity *parent, const struct_field_info *fields);
 
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
+
         virtual identity_type type() const { return IDTYPE_STRUCT; }
 
         const struct_identity *getParent() const { return parent; }
@@ -327,6 +342,10 @@ namespace DFHack
         global_identity(const struct_field_info *fields)
             : struct_identity(typeid(global_identity),0,NULL,NULL,"global",NULL,fields) {}
 
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
+
         virtual identity_type type() const { return IDTYPE_GLOBAL; }
 
         virtual void build_metatable(lua_State *state) const;
@@ -337,6 +356,10 @@ namespace DFHack
         union_identity(const std::type_info& id, size_t size, TAllocateFn alloc,
                 const compound_identity *scope_parent, const char *dfhack_name,
                 const struct_identity *parent, const struct_field_info *fields);
+
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
         virtual identity_type type() { return IDTYPE_UNION; }
 
@@ -354,6 +377,10 @@ namespace DFHack
             struct_identity(id, size, alloc, scope_parent, dfhack_name, parent, fields),
             index_enum(index_enum)
         {}
+
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
         const enum_identity *getIndexEnum() const { return index_enum; }
 
@@ -397,6 +424,10 @@ namespace DFHack
             const virtual_identity *parent, const struct_field_info *fields,
                          bool is_plugin = false);
         ~virtual_identity();
+
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
         virtual identity_type type() const { return IDTYPE_CLASS; }
 

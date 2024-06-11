@@ -143,7 +143,7 @@ struct Plugin::LuaCommand {
 struct Plugin::LuaFunction {
     Plugin *owner;
     std::string name;
-    function_identity_base *identity;
+    const function_identity_base *identity;
     bool silent;
 
     LuaFunction(Plugin *owner, std::string name)

@@ -537,16 +537,16 @@ namespace DFHack {namespace Lua {
     class DFHACK_EXPORT Notification : public Event::Owner {
         lua_State *state;
         void *key;
-        function_identity_base *handler;
+        const function_identity_base *handler;
         int count;
 
     public:
-        Notification(function_identity_base *handler = NULL)
+        Notification(const function_identity_base *handler = NULL)
             : state(NULL), key(NULL), handler(handler), count(0) {}
 
         int get_listener_count() { return count; }
         lua_State *get_state() { return state; }
-        function_identity_base *get_handler() { return handler; }
+        const function_identity_base *get_handler() { return handler; }
 
         lua_State *state_if_count() { return (count > 0) ? state : NULL; }
 

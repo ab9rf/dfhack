@@ -87,6 +87,10 @@ namespace DFHack
         opaque_identity(const std::type_info& id, size_t size, TAllocateFn alloc, const std::string &name)
           : constructed_identity(id, size, alloc), name(name) {};
 
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
+
         virtual const std::string getFullName() const { return name; }
         virtual identity_type type() const { return IDTYPE_OPAQUE; }
     };
@@ -97,6 +101,15 @@ namespace DFHack
     public:
         pointer_identity(const std::type_info& id, const type_identity *target = NULL)
             : primitive_identity(id, sizeof(void*)), target(target) {};
+
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
+
+        bool operator==(const type_identity& other) const override {
+            auto o = dynamic_cast<const pointer_identity*>(&other);
+            return o && target == o->target;
+        }
 
         virtual identity_type type() const { return IDTYPE_POINTER; }
 
@@ -246,16 +259,23 @@ namespace df
     class integer_identity : public integer_identity_base {
     public:
         integer_identity(const char *name) : integer_identity_base(typeid(T), sizeof(T), name) {}
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
     protected:
         virtual int64_t read(void *ptr) const { return int64_t(*(T*)ptr); }
         virtual void write(void *ptr, int64_t val) const { *(T*)ptr = T(val); }
+
     };
 
     template<class T>
     class float_identity : public float_identity_base {
     public:
         float_identity(const char *name) : float_identity_base(typeid(T), sizeof(T), name) {}
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
     protected:
         virtual double read(void *ptr) const { return double(*(T*)ptr); }
@@ -265,6 +285,9 @@ namespace df
     class DFHACK_EXPORT bool_identity : public primitive_identity {
     public:
         bool_identity() : primitive_identity(typeid(bool), sizeof(bool)) {};
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
         const std::string getFullName() const { return "bool"; }
 
@@ -275,6 +298,9 @@ namespace df
     class DFHACK_EXPORT ptr_string_identity : public primitive_identity {
     public:
         ptr_string_identity() : primitive_identity(typeid(char*), sizeof(char*)) {};
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
         const std::string getFullName() const { return "char*"; }
 
@@ -287,6 +313,10 @@ namespace df
         stl_string_identity()
             : constructed_identity(typeid(std::string), sizeof(std::string), &allocator_fn<std::string>)
         {};
+
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
         const std::string getFullName() const { return "string"; }
 
@@ -310,6 +340,10 @@ namespace df
         stl_ptr_vector_identity(const type_identity *item = NULL, const enum_identity *ienum = NULL)
             : ptr_container_identity(typeid(container), sizeof(container), &df::allocator_fn<container>, item, ienum)
         {};
+
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
         const std::string getFullName(const type_identity *item) const {
             return "vector" + ptr_container_identity::getFullName(item);
@@ -355,6 +389,10 @@ namespace df
             : container_identity(id, 0, NULL, item, ienum), size(size)
         {}
 
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
+
         size_t byte_size() const { return getItemType()->byte_size()*size; }
 
         const std::string getFullName(const type_identity *item) const;
@@ -380,6 +418,10 @@ namespace df
         stl_container_identity(const char *name, const type_identity *item, const enum_identity *ienum = NULL)
             : container_identity(typeid(T), sizeof(T), &allocator_fn<T>, item, ienum), name(name)
         {}
+
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
         const std::string getFullName(const type_identity *item) const {
             return name + container_identity::getFullName(item);
@@ -418,6 +460,10 @@ namespace df
             : container_identity(typeid(T), sizeof(T), &allocator_fn<T>, item, ienum), name(name)
         {}
 
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
+
         const std::string getFullName(const type_identity *item) const {
             return name + container_identity::getFullName(item);
         }
@@ -448,6 +494,10 @@ namespace df
               item_identity(item)
         {}
 
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
+
         virtual const std::string getFullName(const type_identity*) const override {
             return std::string(ro_stl_assoc_container_identity<T>::name) + "<" + key_identity->getFullName() + ", " + item_identity->getFullName() + ">";
         }
@@ -472,6 +522,10 @@ namespace df
         bit_array_identity(const std::type_info& id, const enum_identity *ienum = NULL)
             : bit_container_identity(id, sizeof(container), &allocator_fn<container>, ienum)
         {}
+
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
         const std::string getFullName(type_identity *item) const {
             return "BitArray<>";
@@ -503,6 +557,10 @@ namespace df
             : bit_container_identity(typeid(container), sizeof(container), &df::allocator_fn<container>, ienum)
         {}
 
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
+
         const std::string getFullName(const type_identity *item) const {
             return "vector" + bit_container_identity::getFullName(item);
         }
@@ -533,6 +591,10 @@ namespace df
         enum_list_attr_identity(const type_identity *item)
             : container_identity(typeid(container), sizeof(container), NULL, item, NULL)
         {}
+
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
         const std::string getFullName(const type_identity *item) const {
             return "enum_list_attr" + container_identity::getFullName(item);

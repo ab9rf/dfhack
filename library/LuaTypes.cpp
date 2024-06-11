@@ -1214,7 +1214,7 @@ static int meta_call_function(lua_State *state)
     return method_wrapper_core(state, id);
 }
 
-int LuaWrapper::method_wrapper_core(lua_State *state, function_identity_base *id)
+int LuaWrapper::method_wrapper_core(lua_State *state, const function_identity_base *id)
 {
     if (!id)
     {
@@ -1261,7 +1261,7 @@ int Lua::CallWithCatch(lua_State *state, int (*fn)(lua_State*), const char *cont
  * Push a closure invoking the given function.
  */
 void LuaWrapper::PushFunctionWrapper(lua_State *state, int meta_idx,
-                                     const char *name, function_identity_base *fun)
+                                     const char *name, const function_identity_base *fun)
 {
     lua_rawgetp(state, LUA_REGISTRYINDEX, &DFHACK_TYPETABLE_TOKEN);
     if (meta_idx)
@@ -1269,7 +1269,7 @@ void LuaWrapper::PushFunctionWrapper(lua_State *state, int meta_idx,
     else
         lua_pushlightuserdata(state, NULL); // can't be a metatable
     lua_pushfstring(state, "%s()", name);
-    lua_pushlightuserdata(state, fun);
+    lua_pushlightuserdata(state, const_cast<function_identity_base*>(fun));
     lua_pushcclosure(state, meta_call_function, 4);
 }
 
@@ -1277,7 +1277,7 @@ void LuaWrapper::PushFunctionWrapper(lua_State *state, int meta_idx,
  * Create a closure invoking the given function, and add it to the field table.
  */
 static void AddMethodWrapper(lua_State *state, int meta_idx, int field_idx,
-                             const char *name, function_identity_base *fun)
+                             const char *name, const function_identity_base *fun)
 {
     PushFunctionWrapper(state, meta_idx, name, fun);
     lua_setfield(state, field_idx, name);
@@ -1342,7 +1342,7 @@ static void IndexFields(lua_State *state, int base, const struct_identity *pstru
         {
         case struct_field_info::OBJ_METHOD:
             AddMethodWrapper(state, base+1, base+2, name.c_str(),
-                             (function_identity_base*)fields[i].type);
+                             (const function_identity_base*)fields[i].type);
             continue;
 
         case struct_field_info::CLASS_METHOD:
@@ -1544,7 +1544,7 @@ void LuaWrapper::IndexStatics(lua_State *state, int meta_idx, int ftable_idx, st
             {
             case struct_field_info::CLASS_METHOD:
                 AddMethodWrapper(state, meta_idx, ftable_idx, fields[i].name,
-                                 (function_identity_base*)fields[i].type);
+                                 (const function_identity_base*)fields[i].type);
                 break;
 
             default:

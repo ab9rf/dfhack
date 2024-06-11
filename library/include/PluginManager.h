@@ -77,7 +77,7 @@ namespace DFHack
     };
     struct DFHACK_EXPORT FunctionReg {
         const char *name;
-        function_identity_base *identity;
+        const function_identity_base *identity;
     };
     struct DFHACK_EXPORT EventReg {
         const char *name;

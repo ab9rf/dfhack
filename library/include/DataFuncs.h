@@ -64,7 +64,7 @@ namespace df {
     };
 
     template<typename RT>
-    concept isPrimitive = identity_traits<RT>::is_primitive || std::is_void_v<RT>;
+    concept isPrimitive = identity_traits<RT>::is_primitive || std::is_enum_v<RT> || std::is_void_v<RT>;
 
     template<typename T>
     T get_from_lua_state(lua_State* L, int idx) {
@@ -143,21 +143,30 @@ namespace df {
     template<typename T>
     class function_identity : public function_identity_base {
         T ptr;
-
     public:
         using wrapper = function_wrapper<T>;
 
-        function_identity(T ptr, bool vararg)
-            : function_identity_base(typeid(T), wrapper::num_args, vararg), ptr(ptr) {};
+        function_identity(T fn, bool vararg)
+            : function_identity_base(typeid(T), wrapper::num_args, vararg), ptr(fn) {};
+
+        std::unique_ptr<const type_identity> clone() const {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
         virtual void invoke(lua_State *state, int base) const { wrapper::execute(state, base, ptr); }
+
+        bool operator==(const type_identity& other) const override {
+            auto o = dynamic_cast<const function_identity<T>*>(&other);
+            return o && ptr == o->ptr;
+        }
+
     };
 
     template<typename T>
-    inline function_identity_base *wrap_function(T ptr, bool vararg = false) {
+    inline const function_identity_base *wrap_function(T ptr, bool vararg = false) {
         using RT = return_type<T>::type;
         if constexpr (isPrimitive<RT>)
-            return new function_identity<T>(ptr, vararg);
+            return new function_identity<T>(ptr, vararg); // fixme???
         else
             return nullptr;
     }}
