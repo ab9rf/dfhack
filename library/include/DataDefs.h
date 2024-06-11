@@ -361,7 +361,7 @@ namespace DFHack
             return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
         }
 
-        virtual identity_type type() { return IDTYPE_UNION; }
+        virtual identity_type type() const { return IDTYPE_UNION; }
 
         virtual void build_metatable(lua_State *state) const;
     };

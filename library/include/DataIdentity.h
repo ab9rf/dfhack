@@ -527,7 +527,7 @@ namespace df
             return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
         }
 
-        const std::string getFullName(type_identity *item) const {
+        virtual const std::string getFullName(const type_identity *item) const {
             return "BitArray<>";
         }
 
