@@ -810,7 +810,7 @@ static int meta_primitive_index(lua_State *state)
         if (strcmp(attr, "ref_target") == 0) {
             const struct_field_info *field_info = get_object_ref_header(state, 1)->field_info;
             if (field_info && field_info->extra && field_info->extra->ref_target) {
-                LookupInTable(state, field_info->extra->ref_target, &DFHACK_TYPEID_TABLE_TOKEN);
+                LookupInTable(state, const_cast<type_identity*>(field_info->extra->ref_target), &DFHACK_TYPEID_TABLE_TOKEN);
             } else {
                 lua_pushnil(state);
             }
@@ -1826,7 +1826,7 @@ void LuaWrapper::push_adhoc_pointer(lua_State *state, void *ptr, const type_iden
          */
 
         void *newobj = lua_newuserdata(state, sizeof(pointer_identity));
-        id = new (newobj) pointer_identity(target);
+        id = new (newobj) pointer_identity(typeid(void*), target); // FIXME!!!
 
         SaveInTable(state, const_cast<type_identity*>(target), &DFHACK_PTR_IDTABLE_TOKEN);
         lua_pop(state, 1);

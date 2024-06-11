@@ -63,11 +63,8 @@ namespace df {
         static const bool is_method = true;
     };
 
-    // the std::is_enum_v alternative is because pushing is_primitive
-    // into all the enum identities would require changing codegen
-
     template<typename RT>
-    concept isPrimitive = identity_traits<RT>::is_primitive || std::is_enum_v<RT> || std::is_void_v<RT>;
+    concept isPrimitive = identity_traits<RT>::is_primitive || std::is_void_v<RT>;
 
     template<typename T>
     T get_from_lua_state(lua_State* L, int idx) {
@@ -151,7 +148,7 @@ namespace df {
         using wrapper = function_wrapper<T>;
 
         function_identity(T ptr, bool vararg)
-            : function_identity_base(wrapper::num_args, vararg), ptr(ptr) {};
+            : function_identity_base(typeid(T), wrapper::num_args, vararg), ptr(ptr) {};
 
         virtual void invoke(lua_State *state, int base) const { wrapper::execute(state, base, ptr); }
     };

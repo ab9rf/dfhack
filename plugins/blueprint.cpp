@@ -108,7 +108,7 @@ struct blueprint_options {
     // bool query = false;
     // bool rooms = false;
 
-    static struct_identity _identity;
+    const static struct_identity _identity;
 };
 static const struct_field_info blueprint_options_fields[] = {
     { struct_field_info::PRIMITIVE, "help",                   offsetof(blueprint_options, help),                  &df::identity_traits<bool>::identity,    0, 0 },
@@ -135,7 +135,7 @@ static const struct_field_info blueprint_options_fields[] = {
     // { struct_field_info::PRIMITIVE, "rooms",                  offsetof(blueprint_options, rooms),                 &df::identity_traits<bool>::identity,    0, 0 },
     { struct_field_info::END }
 };
-struct_identity blueprint_options::_identity(sizeof(blueprint_options), &df::allocator_fn<blueprint_options>, NULL, "blueprint_options", NULL, blueprint_options_fields);
+const struct_identity blueprint_options::_identity{ typeid(blueprint_options), sizeof(blueprint_options), &df::allocator_fn<blueprint_options>, NULL, "blueprint_options", NULL, blueprint_options_fields };
 
 command_result blueprint(color_ostream &, vector<string> &);
 

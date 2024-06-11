@@ -68,7 +68,7 @@ struct prospect_options {
     bool shrubs = true;
     bool trees = true;
 
-    static struct_identity _identity;
+    const static struct_identity _identity;
 };
 static const struct_field_info prospect_options_fields[] = {
     { struct_field_info::PRIMITIVE, "help",     offsetof(prospect_options, help),     &df::identity_traits<bool>::identity, 0, 0 },
@@ -86,7 +86,7 @@ static const struct_field_info prospect_options_fields[] = {
     { struct_field_info::PRIMITIVE, "trees",    offsetof(prospect_options, trees),    &df::identity_traits<bool>::identity, 0, 0 },
     { struct_field_info::END }
 };
-struct_identity prospect_options::_identity(sizeof(prospect_options), &df::allocator_fn<prospect_options>, NULL, "prospect_options", NULL, prospect_options_fields);
+const struct_identity prospect_options::_identity{ typeid(prospect_options), sizeof(prospect_options), &df::allocator_fn<prospect_options>, NULL, "prospect_options", NULL, prospect_options_fields };
 
 struct matdata
 {

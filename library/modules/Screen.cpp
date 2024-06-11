@@ -1191,11 +1191,11 @@ static const struct_field_info dfhack_viewscreen_fields[] = {
     { FLD_END }
 };
 #undef CUR_STRUCT
-virtual_identity dfhack_viewscreen::_identity(sizeof(dfhack_viewscreen), nullptr, "dfhack_viewscreen", nullptr, &df::viewscreen::_identity, dfhack_viewscreen_fields);
+virtual_identity dfhack_viewscreen::_identity(typeid(dfhack_viewscreen), sizeof(dfhack_viewscreen), nullptr, "dfhack_viewscreen", nullptr, &df::viewscreen::_identity, dfhack_viewscreen_fields);
 
 #define CUR_STRUCT dfhack_lua_viewscreen
 static const struct_field_info dfhack_lua_viewscreen_fields[] = {
     { FLD_END }
 };
 #undef CUR_STRUCT
-virtual_identity dfhack_lua_viewscreen::_identity(sizeof(dfhack_lua_viewscreen), nullptr, "dfhack_lua_viewscreen", nullptr, &dfhack_viewscreen::_identity, dfhack_lua_viewscreen_fields);
+virtual_identity dfhack_lua_viewscreen::_identity(typeid(dfhack_viewscreen), sizeof(dfhack_lua_viewscreen), nullptr, "dfhack_lua_viewscreen", nullptr, &dfhack_viewscreen::_identity, dfhack_lua_viewscreen_fields);

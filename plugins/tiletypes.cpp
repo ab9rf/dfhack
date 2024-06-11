@@ -65,7 +65,7 @@ struct tiletypes_options {
     // if set, then use this position instead of the active game cursor
     df::coord cursor;
 
-    static struct_identity _identity;
+    const static struct_identity _identity;
 };
 static const struct_field_info tiletypes_options_fields[] = {
     { struct_field_info::PRIMITIVE, "help",   offsetof(tiletypes_options, help),   &df::identity_traits<bool>::identity, 0, 0 },
@@ -73,7 +73,7 @@ static const struct_field_info tiletypes_options_fields[] = {
     { struct_field_info::SUBSTRUCT, "cursor", offsetof(tiletypes_options, cursor), &df::coord::_identity,                0, 0 },
     { struct_field_info::END }
 };
-struct_identity tiletypes_options::_identity(sizeof(tiletypes_options), &df::allocator_fn<tiletypes_options>, NULL, "tiletypes_options", NULL, tiletypes_options_fields);
+const struct_identity tiletypes_options::_identity{ typeid(tiletypes_options), sizeof(tiletypes_options), &df::allocator_fn<tiletypes_options>, NULL, "tiletypes_options", NULL, tiletypes_options_fields };
 // pair<bottomShape, topShape> -> newTopShape
 static const std::map<std::pair<df::tiletype_shape, df::tiletype_shape>, df::tiletype_shape> surroundingsMap = {
     { { df::tiletype_shape::WALL, df::tiletype_shape::EMPTY    }, df::tiletype_shape::FLOOR    },

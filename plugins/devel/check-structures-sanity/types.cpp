@@ -173,7 +173,7 @@ const type_identity *Checker::wrap_in_pointer(const type_identity *base)
     {
         return it->second.get();
     }
-    return (wrappers[base] = std::make_unique<const df::pointer_identity>(base)).get();
+    return (wrappers[base] = std::make_unique<const df::pointer_identity>(typeid(void*), base)).get(); // fixme
 }
 
 std::map<size_t, std::vector<std::string>> known_types_by_size;

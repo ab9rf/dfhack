@@ -79,9 +79,10 @@ namespace DFHack
 
     class DFHACK_EXPORT type_identity {
         const size_t size;
+        const std::type_info& id;
 
     protected:
-        type_identity(size_t size) : size(size) {};
+        type_identity(const std::type_info& id, size_t size) : id(id), size(size) {};
 
         void *do_allocate_pod() const;
         void do_copy_pod(void *tgt, const void *src) const;
@@ -98,6 +99,8 @@ namespace DFHack
         virtual size_t byte_size() const { return size; }
 
         virtual identity_type type() const = 0;
+
+        const std::type_info& get_typeid() const { return id; }
 
         virtual const std::string getFullName() const = 0;
 
@@ -122,8 +125,8 @@ namespace DFHack
         const TAllocateFn allocator;
 
     protected:
-        constructed_identity(size_t size, const TAllocateFn alloc)
-            : type_identity(size), allocator(alloc) {};
+        constructed_identity(const std::type_info& id, size_t size, const TAllocateFn alloc)
+            : type_identity(id, size), allocator(alloc) {};
 
         virtual bool can_allocate() const { return (allocator != NULL); }
         virtual void *do_allocate() const { return allocator(NULL,NULL); }
@@ -147,7 +150,7 @@ namespace DFHack
         static std::vector<const compound_identity*> top_scope;
 
     protected:
-        compound_identity(size_t size, TAllocateFn alloc,
+        compound_identity(const std::type_info& id, size_t size, TAllocateFn alloc,
             const compound_identity *scope_parent, const char *dfhack_name);
 
         virtual void doInit(Core *core);
@@ -186,7 +189,7 @@ namespace DFHack
         virtual bool do_destroy(void *obj) const { return do_destroy_pod(obj); }
 
     public:
-        bitfield_identity(size_t size,
+        bitfield_identity(const std::type_info& id, size_t size,
             const compound_identity *scope_parent, const char *dfhack_name,
                           int num_bits, const bitfield_item_info *bits);
 
@@ -232,7 +235,7 @@ namespace DFHack
         virtual bool do_destroy(void *obj) const { return do_destroy_pod(obj); }
 
     public:
-        enum_identity(size_t size,
+        enum_identity(const std::type_info& id, size_t size,
             const compound_identity *scope_parent, const char *dfhack_name,
             const type_identity *base_type,
                       int64_t first_item_value, int64_t last_item_value,
@@ -261,8 +264,8 @@ namespace DFHack
     };
 
     struct struct_field_info_extra {
-        enum_identity *index_enum;
-        type_identity *ref_target;
+        const enum_identity *index_enum;
+        const type_identity *ref_target;
         const char *union_tag_field;
         const char *union_tag_attr;
         const char *original_name;
@@ -300,7 +303,7 @@ namespace DFHack
         virtual void doInit(Core *core);
 
     public:
-        struct_identity(size_t size, TAllocateFn alloc,
+        struct_identity(const std::type_info& id, size_t size, TAllocateFn alloc,
             const compound_identity *scope_parent, const char *dfhack_name,
             const struct_identity *parent, const struct_field_info *fields);
 
@@ -318,9 +321,11 @@ namespace DFHack
     };
 
     class DFHACK_EXPORT global_identity : public struct_identity {
+        // this class exists solely to give global_identity a type it can use as a type id
+        class global_holder {};
     public:
         global_identity(const struct_field_info *fields)
-            : struct_identity(0,NULL,NULL,"global",NULL,fields) {}
+            : struct_identity(typeid(global_identity),0,NULL,NULL,"global",NULL,fields) {}
 
         virtual identity_type type() const { return IDTYPE_GLOBAL; }
 
@@ -329,9 +334,9 @@ namespace DFHack
 
     class DFHACK_EXPORT union_identity : public struct_identity {
     public:
-        union_identity(size_t size, TAllocateFn alloc,
-                compound_identity *scope_parent, const char *dfhack_name,
-                struct_identity *parent, const struct_field_info *fields);
+        union_identity(const std::type_info& id, size_t size, TAllocateFn alloc,
+                const compound_identity *scope_parent, const char *dfhack_name,
+                const struct_identity *parent, const struct_field_info *fields);
 
         virtual identity_type type() { return IDTYPE_UNION; }
 
@@ -342,11 +347,11 @@ namespace DFHack
         const enum_identity *index_enum;
 
     public:
-        other_vectors_identity(size_t size, const TAllocateFn alloc,
+        other_vectors_identity(const std::type_info& id, size_t size, const TAllocateFn alloc,
             const compound_identity *scope_parent, const char *dfhack_name,
             const struct_identity *parent, const struct_field_info *fields,
             const enum_identity *index_enum) :
-            struct_identity(size, alloc, scope_parent, dfhack_name, parent, fields),
+            struct_identity(id, size, alloc, scope_parent, dfhack_name, parent, fields),
             index_enum(index_enum)
         {}
 
@@ -387,7 +392,7 @@ namespace DFHack
         bool set_vmethod_ptr(MemoryPatcher &patcher, int index, void *ptr) const;
 
     public:
-        virtual_identity(size_t size, const TAllocateFn alloc,
+        virtual_identity(const std::type_info& id, size_t size, const TAllocateFn alloc,
                          const char *dfhack_name, const char *original_name,
             const virtual_identity *parent, const struct_field_info *fields,
                          bool is_plugin = false);
@@ -422,13 +427,13 @@ namespace DFHack
         template<class P> static P get_vmethod_ptr(P selector);
 
     public:
-        bool can_instantiate() { return can_allocate(); }
-        virtual_ptr instantiate() { return can_instantiate() ? (virtual_ptr)do_allocate() : NULL; }
+        bool can_instantiate() const { return can_allocate(); }
+        virtual_ptr instantiate() const { return can_instantiate() ? (virtual_ptr)do_allocate() : NULL; }
         static virtual_ptr clone(virtual_ptr obj);
 
     public:
         // Strictly for use in virtual class constructors
-        void adjust_vtable(virtual_ptr obj, virtual_identity *main);
+        void adjust_vtable(virtual_ptr obj, const virtual_identity *main) const;
     };
 
     template<class T>
@@ -544,10 +549,10 @@ namespace df
     struct identity_traits {};
 
     template<class T>
-        requires requires () { { &T::_identity } -> std::convertible_to<compound_identity*>; }
+        requires requires () { { &T::_identity } -> std::convertible_to<const compound_identity*>; }
     struct identity_traits<T> {
         static const bool is_primitive = false;
-        static compound_identity *get() { return &T::_identity; }
+        static const compound_identity *get() { return &T::_identity; }
     };
 
     template<class T>

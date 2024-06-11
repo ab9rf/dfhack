@@ -127,14 +127,14 @@ struct autonestbox_options {
     // whether to run a cycle right now
     bool now = false;
 
-    static struct_identity _identity;
+    const static struct_identity _identity;
 };
 static const struct_field_info autonestbox_options_fields[] = {
     { struct_field_info::PRIMITIVE, "help",  offsetof(autonestbox_options, help),  &df::identity_traits<bool>::identity,    0, 0 },
     { struct_field_info::PRIMITIVE, "now",   offsetof(autonestbox_options, now),   &df::identity_traits<bool>::identity,    0, 0 },
     { struct_field_info::END }
 };
-struct_identity autonestbox_options::_identity(sizeof(autonestbox_options), &df::allocator_fn<autonestbox_options>, NULL, "autonestbox_options", NULL, autonestbox_options_fields);
+const struct_identity autonestbox_options::_identity{ typeid(autonestbox_options), sizeof(autonestbox_options), &df::allocator_fn<autonestbox_options>, NULL, "autonestbox_options", NULL, autonestbox_options_fields };
 
 static command_result df_autonestbox(color_ostream &out, vector<string> &parameters) {
     CoreSuspender suspend;

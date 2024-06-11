@@ -1080,7 +1080,7 @@ bool DFHack::Lua::Require(color_ostream &out, lua_State *state,
 }
 
 static bool doAssignDFObject(color_ostream *out, lua_State *state,
-                             type_identity *type, void *target, int val_index,
+                             const type_identity *type, void *target, int val_index,
                              bool exact, bool perr, bool signal)
 {
     if (signal)
@@ -1127,13 +1127,13 @@ static bool doAssignDFObject(color_ostream *out, lua_State *state,
 }
 
 bool DFHack::Lua::AssignDFObject(color_ostream &out, lua_State *state,
-                                 type_identity *type, void *target, int val_index,
+                                 const type_identity *type, void *target, int val_index,
                                  bool exact_type, bool perr)
 {
     return doAssignDFObject(&out, state, type, target, val_index, exact_type, perr, false);
 }
 
-void DFHack::Lua::CheckDFAssign(lua_State *state, type_identity *type,
+void DFHack::Lua::CheckDFAssign(lua_State *state, const type_identity *type,
                                 void *target, int val_index, bool exact_type)
 {
     doAssignDFObject(NULL, state, type, target, val_index, exact_type, false, true);

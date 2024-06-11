@@ -15,11 +15,11 @@
 
 namespace df {
 #define NUMBER_IDENTITY_TRAITS(category, type, name) \
-    const category##_identity<type> identity_traits<type>::identity(name);
+    const category##_identity<type> identity_traits<type>::identity { name };
 #define INTEGER_IDENTITY_TRAITS(type, name) NUMBER_IDENTITY_TRAITS(integer, type, name)
 #define FLOAT_IDENTITY_TRAITS(type) NUMBER_IDENTITY_TRAITS(float, type, #type)
 #define OPAQUE_IDENTITY_TRAITS_NAME(name, ...) \
-    const opaque_identity identity_traits<__VA_ARGS__ >::identity(sizeof(__VA_ARGS__), allocator_noassign_fn<__VA_ARGS__ >, name)
+    const opaque_identity identity_traits<__VA_ARGS__ >::identity { typeid(__VA_ARGS__), sizeof(__VA_ARGS__), allocator_noassign_fn<__VA_ARGS__ >, name }
 #define OPAQUE_IDENTITY_TRAITS(...) OPAQUE_IDENTITY_TRAITS_NAME(#__VA_ARGS__, __VA_ARGS__ )
 
     INTEGER_IDENTITY_TRAITS(char,               "char");
@@ -40,10 +40,10 @@ namespace df {
     const stl_string_identity identity_traits<std::string>::identity;
     const ptr_string_identity identity_traits<char*>::identity;
     const ptr_string_identity identity_traits<const char*>::identity;
-    const pointer_identity identity_traits<void*>::identity;
+    const pointer_identity identity_traits<void*>::identity{ typeid(void*) };
     const stl_ptr_vector_identity identity_traits<std::vector<void*> >::identity;
-    const stl_bit_vector_identity identity_traits<std::vector<bool> >::identity;
-    const bit_array_identity identity_traits<BitArray<int> >::identity;
+    const stl_bit_vector_identity identity_traits<std::vector<bool> >::identity{ typeid(std::vector<bool>) };
+    const bit_array_identity identity_traits<BitArray<int> >::identity{ typeid(BitArray<int>) };
 
     OPAQUE_IDENTITY_TRAITS(std::condition_variable);
     OPAQUE_IDENTITY_TRAITS(std::fstream);
