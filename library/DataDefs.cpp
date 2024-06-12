@@ -79,6 +79,44 @@ bool type_identity::destroy(void *obj) const {
         return false;
 }
 
+struct identity_hashcomp
+{
+    using T = const DFHack::type_identity*;
+
+    std::size_t operator()(const T t) const noexcept
+    {
+        return t->get_typeid().hash_code();
+    }
+    bool operator() (const T& lhs, const T& rhs) const
+    {
+        return (*lhs) == (*rhs);
+    }
+};
+
+static std::unordered_map<const type_identity*, std::unique_ptr<const type_identity>, identity_hashcomp, identity_hashcomp> canonical_map{};
+
+const type_identity* type_identity::canonicalize() const
+{
+    if (this->canon)
+        return this->canon;
+
+    auto item = canonical_map.find(this);
+    if (item == canonical_map.end())
+    {
+        auto copy = this->clone();
+        canon = copy.get();
+        std::cerr << "notice: " << this->get_typeid().name() << " (" << this << ") canonicalized as " << canon << std::endl;
+        canonical_map[canon] = std::move(copy);
+    }
+    else
+    {
+        canon = item->second.get();
+    }
+
+    assert(*this == *canon);
+    return canon;
+}
+
 void *enum_identity::do_allocate() const {
     size_t sz = byte_size();
     void *p = malloc(sz);
@@ -103,10 +141,26 @@ compound_identity::compound_identity(const std::type_info& id, size_t size, TAll
 
 void compound_identity::doInit(Core *)
 {
+    auto canon = dynamic_cast<const compound_identity*>(canonicalize());
+    assert(canon != nullptr);
+    assert(*canon == *this);
+
+    auto type = this;
+
     if (scope_parent)
-        scope_parent->scope_children.push_back(this);
+    {
+        if (std::ranges::count(scope_parent->scope_children, type) > 0)
+            std::cerr << "duplicate push to scope_children : " << type->get_typeid().name() << std::endl;
+        else
+            scope_parent->scope_children.push_back(type);
+    }
     else
-        top_scope.push_back(this);
+    {
+        if (std::ranges::count(top_scope, type) > 0)
+            std::cerr << "duplicate push to top_scope : " << type->get_typeid().name() << std::endl;
+        else
+            top_scope.push_back(type);
+    }
 }
 
 const std::string compound_identity::getFullName() const

@@ -80,6 +80,7 @@ namespace DFHack
     class DFHACK_EXPORT type_identity {
         const size_t size;
         const std::type_info& id;
+        mutable const type_identity* canon = nullptr; // memoization
 
     protected:
         type_identity(const std::type_info& id, size_t size) : id(id), size(size) {};
@@ -96,6 +97,8 @@ namespace DFHack
     public:
         virtual ~type_identity() {}
         virtual std::unique_ptr<const type_identity> clone() const = 0;
+
+        const type_identity* canonicalize() const;
 
         virtual size_t byte_size() const { return size; }
 
