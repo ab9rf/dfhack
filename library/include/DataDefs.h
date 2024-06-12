@@ -251,11 +251,11 @@ namespace DFHack
         virtual void build_metatable(lua_State *state) const;
     };
 
-    class struct_identity;
-
     ///
     /// enum_identity - enums
     ///
+
+    class struct_identity;
 
     class DFHACK_EXPORT enum_identity : public compound_identity {
     public:
@@ -337,6 +337,10 @@ namespace DFHack
         virtual void lua_write(lua_State *state, int fname_idx, void *ptr, int val_index) const;
     };
 
+    ///
+    /// struct_identity
+    ///
+
     struct struct_field_info_extra {
         const enum_identity *index_enum;
         const type_identity *ref_target;
@@ -375,15 +379,14 @@ namespace DFHack
 
     protected:
         virtual void doInit(Core *core);
+        virtual std::unique_ptr<const type_identity> clone() const override {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
     public:
         struct_identity(const std::type_info& id, size_t size, TAllocateFn alloc,
             const compound_identity *scope_parent, const char *dfhack_name,
             const struct_identity *parent, const struct_field_info *fields);
-
-        virtual std::unique_ptr<const type_identity> clone() const override {
-            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
-        }
 
         virtual identity_type type() const { return IDTYPE_STRUCT; }
 
