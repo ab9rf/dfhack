@@ -155,10 +155,10 @@ namespace df {
 
         virtual void invoke(lua_State *state, int base) const { wrapper::execute(state, base, ptr); }
 
-        bool operator==(const type_identity& other) const override {
-            auto o = dynamic_cast<const function_identity<T>*>(&other);
-            return o && ptr == o->ptr;
-        }
+        //bool operator==(const type_identity& other) const override {
+        //    auto o = dynamic_cast<const function_identity<T>*>(&other);
+        //    return o && ptr == o->ptr;
+        //}
 
     };
 

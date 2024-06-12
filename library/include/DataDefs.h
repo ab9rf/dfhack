@@ -31,6 +31,7 @@ distribution.
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <typeindex>
 
 #include "BitArray.h"
 
@@ -79,11 +80,12 @@ namespace DFHack
 
     class DFHACK_EXPORT type_identity {
         const size_t size;
-        const std::type_info& id;
+        const std::type_index id;
         mutable const type_identity* canon = nullptr; // memoization
 
     protected:
-        type_identity(const std::type_info& id, size_t size) : id(id), size(size) {};
+        type_identity(const std::type_info& id, size_t size) : id(std::type_index{ id }), size(size) {};
+        type_identity(const std::type_index id, size_t size) : id(id), size(size) {};
 
         void *do_allocate_pod() const;
         void do_copy_pod(void *tgt, const void *src) const;
@@ -97,16 +99,15 @@ namespace DFHack
     public:
         virtual ~type_identity() {}
         virtual std::unique_ptr<const type_identity> clone() const = 0;
+        bool operator==(const type_identity& rhs) const = default;
 
         const type_identity* canonicalize() const;
 
         virtual size_t byte_size() const { return size; }
 
-        virtual bool operator==(const type_identity& other) const { return id == other.id; }
-
         virtual identity_type type() const = 0;
 
-        const std::type_info& get_typeid() const { return id; }
+        const std::type_index get_typeid() const { return id; }
 
         virtual const std::string getFullName() const = 0;
 
@@ -132,6 +133,8 @@ namespace DFHack
 
     protected:
         constructed_identity(const std::type_info& id, size_t size, const TAllocateFn alloc)
+            : constructed_identity(std::type_index{id}, size, alloc) {};
+        constructed_identity(const std::type_index id, size_t size, const TAllocateFn alloc)
             : type_identity(id, size), allocator(alloc) {};
 
         virtual bool can_allocate() const { return (allocator != NULL); }
@@ -157,8 +160,12 @@ namespace DFHack
         static std::vector<const compound_identity*> top_scope;
 
     protected:
-        compound_identity(const std::type_info& id, size_t size, TAllocateFn alloc,
+        compound_identity(const std::type_index id, size_t size, TAllocateFn alloc,
             const compound_identity *scope_parent, const char *dfhack_name);
+
+        compound_identity(const std::type_info& id, size_t size, TAllocateFn alloc,
+            const compound_identity* scope_parent, const char* dfhack_name) :
+            compound_identity(std::type_index{ id }, size, alloc, scope_parent, dfhack_name) {};
 
         virtual void doInit(Core *core);
 
@@ -250,12 +257,21 @@ namespace DFHack
 
     public:
         enum_identity(const std::type_info& id, size_t size,
-            const compound_identity *scope_parent, const char *dfhack_name,
-            const type_identity *base_type,
-                      int64_t first_item_value, int64_t last_item_value,
-                      const char *const *keys,
-                      const ComplexData *complex,
-                      const void *attrs, const struct_identity *attr_type);
+            const compound_identity* scope_parent, const char* dfhack_name,
+            const type_identity* base_type,
+            int64_t first_item_value, int64_t last_item_value,
+            const char* const* keys,
+            const ComplexData* complex,
+            const void* attrs, const struct_identity* attr_type) :
+            enum_identity(std::type_index{ id }, size, scope_parent, dfhack_name, base_type,
+                first_item_value, last_item_value, keys, complex, attrs, attr_type) {};
+        enum_identity(const std::type_index id, size_t size,
+            const compound_identity* scope_parent, const char* dfhack_name,
+            const type_identity* base_type,
+            int64_t first_item_value, int64_t last_item_value,
+            const char* const* keys,
+            const ComplexData* complex,
+            const void* attrs, const struct_identity* attr_type);
         enum_identity(const enum_identity *enum_type, const type_identity *override_base_type);
 
         virtual identity_type type() const { return IDTYPE_ENUM; }

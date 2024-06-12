@@ -106,10 +106,10 @@ namespace DFHack
             return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
         }
 
-        bool operator==(const type_identity& other) const override {
-            auto o = dynamic_cast<const pointer_identity*>(&other);
-            return o && target == o->target;
-        }
+        //bool operator==(const type_identity& other) const override {
+        //    auto o = dynamic_cast<const pointer_identity*>(&other);
+        //    return o && target == o->target;
+        //}
 
         virtual identity_type type() const { return IDTYPE_POINTER; }
 

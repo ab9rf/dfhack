@@ -105,11 +105,13 @@ const type_identity* type_identity::canonicalize() const
     {
         auto copy = this->clone();
         canon = copy.get();
-        std::cerr << "notice: " << this->get_typeid().name() << " (" << this << ") canonicalized as " << canon << std::endl;
+        canon->canon = canon;
+        std::cerr << "notice: " << this->getFullName() << " (" << this << ") canonicalized as " << canon << std::endl;
         canonical_map[canon] = std::move(copy);
     }
     else
     {
+        std::cerr << "notice: " << this->getFullName() << " (" << this << ") canonicalized as " << canon << " (previous canonicalization)" << std::endl;
         canon = item->second.get();
     }
 
@@ -132,9 +134,9 @@ void *enum_identity::do_allocate() const {
 compound_identity *compound_identity::list = NULL;
 std::vector<const compound_identity*> compound_identity::top_scope;
 
-compound_identity::compound_identity(const std::type_info& id, size_t size, TAllocateFn alloc,
+compound_identity::compound_identity(const std::type_index id, size_t size, TAllocateFn alloc,
     const compound_identity *scope_parent, const char *dfhack_name)
-    : constructed_identity(id, size, alloc), dfhack_name(dfhack_name), scope_parent(const_cast<compound_identity*>(scope_parent)) // fixme
+    : constructed_identity(id, size, alloc), dfhack_name(dfhack_name), scope_parent(const_cast<compound_identity*>(scope_parent))
 {
     next = list; list = this;
 }
@@ -191,7 +193,7 @@ bitfield_identity::bitfield_identity(const std::type_info& id, size_t size,
 {
 }
 
-enum_identity::enum_identity(const std::type_info& id, size_t size,
+enum_identity::enum_identity(const std::type_index id, size_t size,
     const compound_identity *scope_parent, const char *dfhack_name,
     const type_identity *base_type,
                              int64_t first_item_value, int64_t last_item_value,
