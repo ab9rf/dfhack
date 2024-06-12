@@ -253,6 +253,10 @@ namespace DFHack
 
     class struct_identity;
 
+    ///
+    /// enum_identity - enums
+    ///
+
     class DFHACK_EXPORT enum_identity : public compound_identity {
     public:
         struct ComplexData {
@@ -399,7 +403,7 @@ namespace DFHack
         class global_holder {};
     public:
         global_identity(const struct_field_info *fields)
-            : struct_identity(typeid(global_identity),0,NULL,NULL,"global",NULL,fields) {}
+            : struct_identity(typeid(global_holder),0,NULL,NULL,"global",NULL,fields) {}
 
         virtual std::unique_ptr<const type_identity> clone() const override {
             return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
