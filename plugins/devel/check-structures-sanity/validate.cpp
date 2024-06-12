@@ -388,12 +388,15 @@ const std::string *Checker::validate_stl_string_pointer(const void *const* base)
 }
 #endif
 
-const char *const *Checker::get_enum_item_key(const enum_identity *identity, int64_t value)
+const std::optional<const char* const> Checker::get_enum_item_key(const enum_identity* identity, int64_t value)
 {
-    return get_enum_item_attr_or_key(identity, value, nullptr);
+    auto index = Checker::get_enum_index(identity, value);
+    if (!index) return std::nullopt;
+    const auto& s = (identity->getKeys())[*index];
+    return { s.c_str() };
 }
 
-const char *const *Checker::get_enum_item_attr_or_key(const enum_identity *identity, int64_t value, const char *attr_name)
+const std::optional<size_t> Checker::get_enum_index(const enum_identity* identity, int64_t value)
 {
     size_t index;
     if (auto cplx = identity->getComplex())
@@ -401,7 +404,7 @@ const char *const *Checker::get_enum_item_attr_or_key(const enum_identity *ident
         auto it = cplx->value_index_map.find(value);
         if (it == cplx->value_index_map.cend())
         {
-            return nullptr;
+            return std::nullopt;
         }
         index = it->second;
     }
@@ -409,31 +412,34 @@ const char *const *Checker::get_enum_item_attr_or_key(const enum_identity *ident
     {
         if (value < identity->getFirstItem() || value > identity->getLastItem())
         {
-            return nullptr;
+            return std::nullopt;
         }
         index = value - identity->getFirstItem();
     }
+    return { index };
+}
 
-    if (attr_name)
+const char *const *Checker::get_enum_item_attr_or_key(const enum_identity *identity, int64_t value, const char *attr_name)
+{
+    auto index = Checker::get_enum_index(identity, value);
+
+    if (!index) return nullptr;
+
+    auto attrs = identity->getAttrs();
+    auto attr_type = identity->getAttrType();
+    if (!attrs || !attr_type)
     {
-        auto attrs = identity->getAttrs();
-        auto attr_type = identity->getAttrType();
-        if (!attrs || !attr_type)
-        {
-            return nullptr;
-        }
-
-        attrs = PTR_ADD(attrs, attr_type->byte_size() * index);
-        for (auto field = attr_type->getFields(); field->mode != struct_field_info::END; field++)
-        {
-            if (!strcmp(field->name, attr_name))
-            {
-                return reinterpret_cast<const char *const *>(PTR_ADD(attrs, field->offset));
-            }
-        }
-
         return nullptr;
     }
 
-    return &identity->getKeys()[index];
+    attrs = PTR_ADD(attrs, attr_type->byte_size() * *index);
+    for (auto field = attr_type->getFields(); field->mode != struct_field_info::END; field++)
+    {
+        if (!strcmp(field->name, attr_name))
+        {
+            return reinterpret_cast<const char *const *>(PTR_ADD(attrs, field->offset));
+        }
+    }
+
+    return nullptr;
 }

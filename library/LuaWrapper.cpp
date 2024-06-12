@@ -1463,7 +1463,7 @@ void LuaWrapper::AssociateId(lua_State *state, int table, int val, const char *n
 
 static void FillEnumKeys(lua_State *state, int ix_meta, int ftable, enum_identity *eid)
 {
-    const char *const *keys = eid->getKeys();
+    const std::vector<std::string>& keys = eid->getKeys();
 
     // Create a new table attached to ftable as __index
     lua_newtable(state);
@@ -1477,16 +1477,16 @@ static void FillEnumKeys(lua_State *state, int ix_meta, int ftable, enum_identit
     {
         for (size_t i = 0; i < complex->size(); i++)
         {
-            if (keys[i])
-                AssociateId(state, base+1, complex->index_value_map[i], keys[i]);
+            if (!keys[i].empty())
+                AssociateId(state, base+1, complex->index_value_map[i], keys[i].c_str());
         }
     }
     else
     {
         for (int64_t i = eid->getFirstItem(), j = 0; i <= eid->getLastItem(); i++, j++)
         {
-            if (keys[j])
-                AssociateId(state, base+1, i, keys[j]);
+            if (!keys[j].empty())
+                AssociateId(state, base+1, i, keys[j].c_str());
         }
     }
 

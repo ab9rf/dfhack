@@ -41,6 +41,11 @@ distribution.
 
 using namespace DFHack;
 
+// constinit guarantees this variable is initialized _before_ dynamic initialization begins
+// and so this will have a defined value even during dynamic initialization
+// set to false during static initialization, set to true once identity system is
+// fully initialized
+constinit static bool identities_initialized = false;
 
 void *type_identity::do_allocate_pod() const {
     size_t sz = byte_size();
@@ -135,10 +140,14 @@ compound_identity *compound_identity::list = NULL;
 std::vector<const compound_identity*> compound_identity::top_scope;
 
 compound_identity::compound_identity(const std::type_index id, size_t size, TAllocateFn alloc,
-    const compound_identity *scope_parent, const char *dfhack_name)
+    const compound_identity* scope_parent, const char* dfhack_name)
     : constructed_identity(id, size, alloc), dfhack_name(dfhack_name), scope_parent(const_cast<compound_identity*>(scope_parent))
 {
     next = list; list = this;
+    if (identities_initialized) {
+        // FIXME: crashes when initializing a struct_identity coming from a plugin, for unclear reasons
+        // Init(&Core::getInstance());
+    }
 }
 
 void compound_identity::doInit(Core *)
@@ -148,17 +157,18 @@ void compound_identity::doInit(Core *)
     assert(*canon == *this);
 
     auto type = this;
+    auto cmp_fn = [type](auto t) { return *t == *type; };
 
     if (scope_parent)
     {
-        if (std::ranges::count(scope_parent->scope_children, type) > 0)
+        if (std::ranges::count_if(scope_parent->scope_children, cmp_fn) > 0)
             std::cerr << "duplicate push to scope_children : " << type->get_typeid().name() << std::endl;
         else
             scope_parent->scope_children.push_back(type);
     }
     else
     {
-        if (std::ranges::count(top_scope, type) > 0)
+        if (std::ranges::count_if(top_scope, cmp_fn) > 0)
             std::cerr << "duplicate push to top_scope : " << type->get_typeid().name() << std::endl;
         else
             top_scope.push_back(type);
@@ -173,7 +183,8 @@ const std::string compound_identity::getFullName() const
         return getName();
 }
 
-static std::mutex *known_mutex = NULL;
+
+constinit static std::mutex *known_mutex = nullptr;
 
 void compound_identity::Init(Core *core)
 {
@@ -182,14 +193,22 @@ void compound_identity::Init(Core *core)
 
     // This cannot be done in the constructors, because
     // they are called in an undefined order.
-    for (compound_identity *p = list; p; p = p->next)
+    while (list != nullptr)
+    {
+        auto p = list;
+        list = list->next;
+        std::cerr << "initializing " << p->getFullName() << std::endl;
         p->doInit(core);
+    }
+
+    assert(list == nullptr);
+    identities_initialized = true;
 }
 
 bitfield_identity::bitfield_identity(const std::type_info& id, size_t size,
                                      const compound_identity *scope_parent, const char *dfhack_name,
-                                     int num_bits, const bitfield_item_info *bits)
-    : compound_identity(id, size, NULL, scope_parent, dfhack_name), bits(bits), num_bits(num_bits)
+                                     bitfield_info bits)
+    : compound_identity(id, size, NULL, scope_parent, dfhack_name), bits(bits)
 {
 }
 
@@ -197,28 +216,43 @@ enum_identity::enum_identity(const std::type_index id, size_t size,
     const compound_identity *scope_parent, const char *dfhack_name,
     const type_identity *base_type,
                              int64_t first_item_value, int64_t last_item_value,
-                             const char *const *keys,
-                             const ComplexData *complex,
+                             const char *const *keys_,
+                             const ComplexData *complex_,
                              const void *attrs, const struct_identity *attr_type)
     : compound_identity(id, size, NULL, scope_parent, dfhack_name),
-      keys(keys), complex(complex),
+    keys({}),
       first_item_value(first_item_value), last_item_value(last_item_value),
-      base_type(base_type), attrs(attrs), attr_type(attr_type)
+    base_type(base_type), attrs(attrs), attr_type(attr_type)
 {
-    if (complex) {
+    if (complex_ != nullptr) {
+        complex = *complex_;
         count = complex->size();
         last_item_value = complex->index_value_map.back();
     }
     else {
         count = int(last_item_value-first_item_value+1);
     }
+    std::transform(keys_, keys_ + count, std::back_inserter(keys),
+        [](const char* const s) { return s != nullptr ? std::string{ s } : std::string{}; });
 }
 
-enum_identity::enum_identity(const enum_identity *base_enum, const type_identity *override_base_type)
+enum_identity::enum_identity(const std::type_index id, size_t size,
+    const compound_identity* scope_parent, const char* dfhack_name,
+    const type_identity* base_type,
+    int64_t first_item_value, int64_t last_item_value,
+    std::vector<std::string> keys,
+    std::optional<ComplexData> complex,
+    const void* attrs, const struct_identity* attr_type, int count)
+    : compound_identity(id, size, NULL, scope_parent, dfhack_name),
+    keys(keys), first_item_value(first_item_value), last_item_value(last_item_value),
+    base_type(base_type), attrs(attrs), attr_type(attr_type), complex(complex), count(count)
+{}
+
+    enum_identity::enum_identity(const enum_identity *base_enum, const type_identity *override_base_type)
     : enum_identity(base_enum->get_typeid(), override_base_type->byte_size(), base_enum->getScopeParent(),
                     base_enum->getName(), override_base_type, base_enum->first_item_value,
                     base_enum->last_item_value, base_enum->keys, base_enum->complex,
-                    base_enum->attrs, base_enum->attr_type)
+                    base_enum->attrs, base_enum->attr_type, base_enum->count)
 {
 }
 
@@ -594,7 +628,7 @@ const struct_field_info *DFHack::find_union_tag(const struct_identity *structure
         return nullptr;
     }
 
-    auto container_type = static_cast<const container_identity *>(union_field->type);
+    auto container_type = dynamic_cast<const container_identity *>(union_field->type);
     if (container_type->getFullName(nullptr) != "vector<void>" ||
             !container_type->getItemType() ||
             container_type->getItemType()->type() != IDTYPE_UNION)
@@ -611,7 +645,7 @@ const struct_field_info *DFHack::find_union_tag(const struct_identity *structure
         return nullptr;
     }
 
-    auto tag_container_type = static_cast<const container_identity *>(tag_candidate->type);
+    auto tag_container_type = dynamic_cast<const container_identity *>(tag_candidate->type);
     if (tag_container_type->getFullName(nullptr) == "vector<void>" &&
             tag_container_type->getItemType() &&
             tag_container_type->getItemType()->type() == IDTYPE_ENUM)
@@ -619,7 +653,7 @@ const struct_field_info *DFHack::find_union_tag(const struct_identity *structure
         return tag_candidate;
     }
 
-    auto union_fields = ((struct_identity*)union_field->type)->getFields();
+    auto union_fields = dynamic_cast<const struct_identity*>(union_field->type)->getFields();
     if (tag_container_type->getFullName() == "vector<bool>" &&
             union_fields[0].mode != struct_field_info::END &&
             union_fields[1].mode != struct_field_info::END &&

@@ -32,6 +32,7 @@ distribution.
 #include <utility>
 #include <vector>
 #include <typeindex>
+#include <optional>
 
 #include "BitArray.h"
 
@@ -78,9 +79,13 @@ namespace DFHack
 
     typedef void *(*TAllocateFn)(void*,const void*);
 
+    ///
+    /// type identity - abstract base class
+    ///
+
     class DFHACK_EXPORT type_identity {
-        const size_t size;
-        const std::type_index id;
+        size_t size;
+        std::type_index id;
         mutable const type_identity* canon = nullptr; // memoization
 
     protected:
@@ -95,13 +100,13 @@ namespace DFHack
         virtual void *do_allocate() const { return do_allocate_pod(); }
         virtual bool do_copy(void *tgt, const void *src) const { do_copy_pod(tgt, src); return true; }
         virtual bool do_destroy(void *obj) const { return do_destroy_pod(obj); }
+        virtual std::unique_ptr<const type_identity> clone() const = 0;
 
     public:
         virtual ~type_identity() {}
-        virtual std::unique_ptr<const type_identity> clone() const = 0;
         bool operator==(const type_identity& rhs) const = default;
 
-        const type_identity* canonicalize() const;
+        virtual const type_identity* canonicalize() const;
 
         virtual size_t byte_size() const { return size; }
 
@@ -128,6 +133,10 @@ namespace DFHack
         bool destroy(void *obj) const;
     };
 
+    ///
+    /// constructed_identity - abstract
+    ///
+
     class DFHACK_EXPORT constructed_identity : public type_identity {
         const TAllocateFn allocator;
 
@@ -149,6 +158,10 @@ namespace DFHack
         virtual void lua_write(lua_State *state, int fname_idx, void *ptr, int val_index) const;
 
     };
+
+    ///
+    /// compound_identity - abstract
+    ///
 
     class DFHACK_EXPORT compound_identity : public constructed_identity {
         static compound_identity *list;
@@ -181,7 +194,10 @@ namespace DFHack
         static void Init(Core *core);
     };
 
-    // Bitfields
+    ///
+    /// bitfield_identity (bitfields)
+    ///
+
     struct bitfield_item_info {
         // the name of the field, or null if the field is unnamed
         const char *name;
@@ -192,9 +208,18 @@ namespace DFHack
         int size;
     };
 
+    struct bitfield_info {
+        std::vector<bitfield_item_info> bits;
+
+        bitfield_info(const bitfield_info& b) : bits(b.bits) {};
+        bitfield_info(const std::vector<bitfield_item_info> bits) : bits(bits) {};
+        bitfield_info(int num_bits, const bitfield_item_info* bits_) : bits({}) {
+            std::copy(bits_, bits_+num_bits, std::back_inserter(bits));
+        }
+    };
+
     class DFHACK_EXPORT bitfield_identity : public compound_identity {
-        const bitfield_item_info *bits;
-        const int num_bits;
+        const bitfield_info bits;
 
     protected:
         virtual bool can_allocate() const { return true; }
@@ -204,9 +229,15 @@ namespace DFHack
 
     public:
         bitfield_identity(const std::type_info& id, size_t size,
-            const compound_identity *scope_parent, const char *dfhack_name,
-                          int num_bits, const bitfield_item_info *bits);
-        std::unique_ptr<const type_identity> clone() const {
+            const compound_identity* scope_parent, const char* dfhack_name,
+            int num_bits, const bitfield_item_info* bits)
+            : bitfield_identity(id, size, scope_parent, dfhack_name, bitfield_info{ num_bits, bits }) {};
+
+        bitfield_identity(const std::type_info& id, size_t size,
+            const compound_identity* scope_parent, const char* dfhack_name,
+            bitfield_info bits);
+
+        virtual std::unique_ptr<const type_identity> clone() const override {
             return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
         }
 
@@ -214,8 +245,8 @@ namespace DFHack
 
         virtual bool isConstructed() const { return false; }
 
-        int getNumBits() const { return num_bits; }
-        const bitfield_item_info *getBits() const { return bits; }
+        int getNumBits() const { return bits.bits.size(); }
+        const std::vector<bitfield_item_info>& getBits() const { return bits.bits; }
 
         virtual void build_metatable(lua_State *state) const;
     };
@@ -232,14 +263,11 @@ namespace DFHack
                 return index_value_map.size();
             }
         };
-        std::unique_ptr<const type_identity> clone() const {
-            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
-        }
 
 
     private:
-        const char *const *keys;
-        const ComplexData *complex;
+        std::vector<std::string> keys;
+        std::optional<ComplexData> complex;
         int64_t first_item_value;
         int64_t last_item_value;
         int count;
@@ -249,11 +277,30 @@ namespace DFHack
         const void *attrs;
         const struct_identity *attr_type;
 
+        enum_identity(const std::type_index id, size_t size,
+            const compound_identity* scope_parent, const char* dfhack_name,
+            const type_identity* base_type,
+            int64_t first_item_value, int64_t last_item_value,
+            std::vector<std::string> keys,
+            std::optional<ComplexData> complex,
+            const void* attrs, const struct_identity* attr_type, int count);
+
+        enum_identity(const std::type_index id, size_t size,
+            const compound_identity* scope_parent, const char* dfhack_name,
+            const type_identity* base_type,
+            int64_t first_item_value, int64_t last_item_value,
+            const char* const* keys,
+            const ComplexData* complex,
+            const void* attrs, const struct_identity* attr_type);
+
     protected:
         virtual bool can_allocate() const { return true; }
         virtual void *do_allocate() const;
         virtual bool do_copy(void *tgt, const void *src) const { do_copy_pod(tgt, src); return true; }
         virtual bool do_destroy(void *obj) const { return do_destroy_pod(obj); }
+        virtual std::unique_ptr<const type_identity> clone() const override {
+            return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
+        }
 
     public:
         enum_identity(const std::type_info& id, size_t size,
@@ -265,13 +312,6 @@ namespace DFHack
             const void* attrs, const struct_identity* attr_type) :
             enum_identity(std::type_index{ id }, size, scope_parent, dfhack_name, base_type,
                 first_item_value, last_item_value, keys, complex, attrs, attr_type) {};
-        enum_identity(const std::type_index id, size_t size,
-            const compound_identity* scope_parent, const char* dfhack_name,
-            const type_identity* base_type,
-            int64_t first_item_value, int64_t last_item_value,
-            const char* const* keys,
-            const ComplexData* complex,
-            const void* attrs, const struct_identity* attr_type);
         enum_identity(const enum_identity *enum_type, const type_identity *override_base_type);
 
         virtual identity_type type() const { return IDTYPE_ENUM; }
@@ -279,8 +319,8 @@ namespace DFHack
         int64_t getFirstItem() const { return first_item_value; }
         int64_t getLastItem() const { return last_item_value; }
         int getCount() const { return count; }
-        const char *const *getKeys() const { return keys; }
-        const ComplexData *getComplex() const { return complex; }
+        const std::vector<std::string>& getKeys() const { return keys; }
+        const ComplexData* getComplex() const { return complex ? &(*complex) : nullptr;  }
 
         const type_identity *getBaseType() const { return base_type; }
         const void *getAttrs() const { return attrs; }
@@ -337,7 +377,7 @@ namespace DFHack
             const compound_identity *scope_parent, const char *dfhack_name,
             const struct_identity *parent, const struct_field_info *fields);
 
-        std::unique_ptr<const type_identity> clone() const {
+        virtual std::unique_ptr<const type_identity> clone() const override {
             return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
         }
 
@@ -361,7 +401,7 @@ namespace DFHack
         global_identity(const struct_field_info *fields)
             : struct_identity(typeid(global_identity),0,NULL,NULL,"global",NULL,fields) {}
 
-        std::unique_ptr<const type_identity> clone() const {
+        virtual std::unique_ptr<const type_identity> clone() const override {
             return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
         }
 
@@ -376,7 +416,7 @@ namespace DFHack
                 const compound_identity *scope_parent, const char *dfhack_name,
                 const struct_identity *parent, const struct_field_info *fields);
 
-        std::unique_ptr<const type_identity> clone() const {
+        virtual std::unique_ptr<const type_identity> clone() const override {
             return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
         }
 
@@ -397,7 +437,7 @@ namespace DFHack
             index_enum(index_enum)
         {}
 
-        std::unique_ptr<const type_identity> clone() const {
+        virtual std::unique_ptr<const type_identity> clone() const override {
             return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
         }
 
@@ -444,7 +484,7 @@ namespace DFHack
                          bool is_plugin = false);
         ~virtual_identity();
 
-        std::unique_ptr<const type_identity> clone() const {
+        virtual std::unique_ptr<const type_identity> clone() const override {
             return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
         }
 

@@ -117,7 +117,8 @@ public:
     // this function doesn't make sense on windows, where std::string is not pointer-sized.
     const std::string *validate_stl_string_pointer(const void *const*);
 #endif
-    static const char *const *get_enum_item_key(const enum_identity *identity, int64_t value);
+    static const std::optional<const char *const> get_enum_item_key(const enum_identity *identity, int64_t value);
+    static const std::optional<size_t> get_enum_index(const enum_identity* identity, int64_t value);
     static const char *const *get_enum_item_attr_or_key(const enum_identity *identity, int64_t value, const char *attr_name);
 
 private:

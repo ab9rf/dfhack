@@ -750,7 +750,8 @@ static int meta_union_next(lua_State *state)
         }
         else
         {
-            tag_name = enum_id->getKeys()[tag_index];
+            auto& tag = enum_id->getKeys()[tag_index];
+            tag_name = !tag.empty() ? tag.c_str() : nullptr;
         }
 
         if (!tag_name)
@@ -1740,11 +1741,12 @@ void other_vectors_identity::build_metatable(lua_State *state) const
     LookupInTable(state, const_cast<enum_identity*>(index_enum), &DFHACK_TYPEID_TABLE_TOKEN);
     lua_setfield(state, base+1, "_enum");
 
-    auto keys = &index_enum->getKeys()[-index_enum->getFirstItem()];
+    auto& keys = index_enum->getKeys();
+    auto first = index_enum->getFirstItem();
 
     for (int64_t i = 0; i <= index_enum->getLastItem(); i++)
     {
-        lua_getfield(state, base+2, keys[i]);
+        lua_getfield(state, base+2, keys[i-first].c_str() );
         lua_rawseti(state, base+2, int(i));
     }
 
