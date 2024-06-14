@@ -207,7 +207,7 @@ void compound_identity::Init(Core *core)
 
 bitfield_identity::bitfield_identity(const std::type_info& id, size_t size,
                                      const compound_identity *scope_parent, const char *dfhack_name,
-                                     bitfield_info bits)
+                                     bitfield_item_info_int bits)
     : compound_identity(id, size, NULL, scope_parent, dfhack_name), bits(bits)
 {
 }
@@ -268,10 +268,13 @@ enum_identity::ComplexData::ComplexData(std::initializer_list<int64_t> values)
 
 struct_identity::struct_identity(const std::type_info& id, size_t size, TAllocateFn alloc,
     const compound_identity *scope_parent, const char *dfhack_name,
-    const struct_identity *parent, const struct_field_info *fields)
+    const struct_identity *parent, const struct_field_info *fields_)
     : compound_identity(id, size, alloc, scope_parent, dfhack_name),
-      parent(const_cast<struct_identity*>(parent)), has_children(false), fields(fields)
+    parent(const_cast<struct_identity*>(parent)), has_children(false), fields({})
 {
+    for (; fields_ && fields_->mode != struct_field_info::Mode::END; fields_++) {
+        fields.push_back(struct_field_info_int{ *fields_ });
+    }
 }
 
 void struct_identity::doInit(Core *core)
@@ -552,26 +555,26 @@ void DFHack::flagarrayToString(std::vector<std::string> *pvec, const void *p,
     }
 }
 
-static const struct_field_info *find_union_tag_candidate(const struct_identity *structure, const struct_field_info *union_field)
+static const std::optional<struct_field_info_int> find_union_tag_candidate(const struct_identity *structure, const struct_field_info_int& union_field)
 {
-    if (union_field->extra && union_field->extra->union_tag_field)
+    if (union_field.extra && !union_field.extra->union_tag_field.empty())
     {
-        auto defined_field_name = union_field->extra->union_tag_field;
+        auto& defined_field_name = union_field.extra->union_tag_field;
         for (auto p = structure; p; p = p->getParent())
         {
-            for (auto field = p->getFields(); field && field->mode != struct_field_info::END; field++)
+            for (auto& field : p->getFields())
             {
-                if (!strcmp(field->name, defined_field_name))
+                if (field.name == defined_field_name)
                 {
                     return field;
                 }
             }
         }
 
-        return nullptr;
+        return std::nullopt;
     }
 
-    std::string name(union_field->name);
+    std::string name(union_field.name);
     if (name.length() >= 4 && name.substr(name.length() - 4) == "data")
     {
         name.erase(name.length() - 4, 4);
@@ -579,9 +582,9 @@ static const struct_field_info *find_union_tag_candidate(const struct_identity *
 
         for (auto p = structure; p; p = p->getParent())
         {
-            for (auto field = p->getFields(); field && field->mode != struct_field_info::END; field++)
+            for (auto& field : p->getFields())
             {
-                if (field->name == name)
+                if (field.name == name)
                 {
                     return field;
                 }
@@ -589,24 +592,24 @@ static const struct_field_info *find_union_tag_candidate(const struct_identity *
         }
     }
 
-    return nullptr;
+    return std::nullopt;
 }
 
-const struct_field_info *DFHack::find_union_tag(const struct_identity *structure, const struct_field_info *union_field)
+const std::optional<const struct_field_info_int> DFHack::find_union_tag(const struct_identity *structure, const struct_field_info_int& union_field)
 {
     CHECK_NULL_POINTER(structure);
-    CHECK_NULL_POINTER(union_field);
+//    CHECK_NULL_POINTER(union_field);
 
     auto tag_candidate = find_union_tag_candidate(structure, union_field);
 
     if (!tag_candidate)
     {
-        return nullptr;
+        return std::nullopt;
     }
 
-    if (union_field->mode == struct_field_info::SUBSTRUCT &&
-            union_field->type &&
-            union_field->type->type() == IDTYPE_UNION)
+    if (union_field.mode == struct_field_info::SUBSTRUCT &&
+            union_field.type &&
+            union_field.type->type() == IDTYPE_UNION)
     {
         // union field
 
@@ -617,24 +620,24 @@ const struct_field_info *DFHack::find_union_tag(const struct_identity *structure
             return tag_candidate;
         }
 
-        return nullptr;
+        return std::nullopt;
     }
 
-    if (union_field->mode != struct_field_info::CONTAINER ||
-            !union_field->type ||
-            union_field->type->type() != IDTYPE_CONTAINER)
+    if (union_field.mode != struct_field_info::CONTAINER ||
+            !union_field.type ||
+            union_field.type->type() != IDTYPE_CONTAINER)
     {
         // not a union field or a vector; bail
-        return nullptr;
+        return std::nullopt;
     }
 
-    auto container_type = dynamic_cast<const container_identity *>(union_field->type);
+    auto container_type = dynamic_cast<const container_identity *>(union_field.type);
     if (container_type->getFullName(nullptr) != "vector<void>" ||
             !container_type->getItemType() ||
             container_type->getItemType()->type() != IDTYPE_UNION)
     {
         // not a vector of unions
-        return nullptr;
+        return std::nullopt;
     }
 
     if (tag_candidate->mode != struct_field_info::CONTAINER ||
@@ -642,7 +645,7 @@ const struct_field_info *DFHack::find_union_tag(const struct_identity *structure
             tag_candidate->type->type() != IDTYPE_CONTAINER)
     {
         // candidate is not a vector
-        return nullptr;
+        return std::nullopt;
     }
 
     auto tag_container_type = dynamic_cast<const container_identity *>(tag_candidate->type);
@@ -653,14 +656,12 @@ const struct_field_info *DFHack::find_union_tag(const struct_identity *structure
         return tag_candidate;
     }
 
-    auto union_fields = dynamic_cast<const struct_identity*>(union_field->type)->getFields();
+    auto union_fields = dynamic_cast<const struct_identity*>(union_field.type)->getFields();
     if (tag_container_type->getFullName() == "vector<bool>" &&
-            union_fields[0].mode != struct_field_info::END &&
-            union_fields[1].mode != struct_field_info::END &&
-            union_fields[2].mode == struct_field_info::END)
+            union_fields.size() == 2)
     {
         return tag_candidate;
     }
 
-    return nullptr;
+    return std::nullopt;
 }

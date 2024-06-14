@@ -480,15 +480,15 @@ static uint8_t *check_method_call(lua_State *state, int min_args, int max_args)
     return get_object_addr(state, 1, UPVAL_METHOD_NAME, "call");
 }
 
-static void GetAdHocMetatable(lua_State *state, const struct_field_info *field);
+static void GetAdHocMetatable(lua_State *state, const struct_field_info_int& field);
 
-static void read_field(lua_State *state, const struct_field_info *field, void *ptr)
+static void read_field(lua_State *state, const struct_field_info_int& field, void *ptr)
 {
-    switch (field->mode)
+    switch (field.mode)
     {
         case struct_field_info::STATIC_STRING:
         {
-            int len = strnlen((char*)ptr, field->count);
+            int len = strnlen((char*)ptr, field.count);
             lua_pushlstring(state, (char*)ptr, len);
             return;
         }
@@ -499,18 +499,18 @@ static void read_field(lua_State *state, const struct_field_info *field, void *p
 
         case struct_field_info::PRIMITIVE:
         case struct_field_info::SUBSTRUCT:
-            field->type->lua_read(state, 2, ptr);
+            field.type->lua_read(state, 2, ptr);
             return;
 
         case struct_field_info::POINTER:
-            df::pointer_identity::lua_read(state, 2, ptr, field->type);
+            df::pointer_identity::lua_read(state, 2, ptr, field.type);
             return;
 
         case struct_field_info::CONTAINER:
-            if (!field->extra || !field->extra->index_enum || !field->type->isContainer() ||
-                field->extra->index_enum == ((container_identity*)field->type)->getIndexEnumType())
+            if (!field.extra || !field.extra->index_enum || !field.type->isContainer() ||
+                field.extra->index_enum == ((container_identity*)field.type)->getIndexEnumType())
             {
-                field->type->lua_read(state, 2, ptr);
+                field.type->lua_read(state, 2, ptr);
                 return;
             }
             // fallthrough
@@ -521,25 +521,25 @@ static void read_field(lua_State *state, const struct_field_info *field, void *p
             push_object_ref(state, ptr);
             return;
 
-        case struct_field_info::END:
+        case struct_field_info::END: // should not be possible
             break;
     }
 
     lua_pushnil(state);
 }
 
-static void field_reference(lua_State *state, const struct_field_info *field, void *ptr)
+static void field_reference(lua_State *state, const struct_field_info_int& field, void *ptr)
 {
-    switch (field->mode)
+    switch (field.mode)
     {
         case struct_field_info::PRIMITIVE:
         case struct_field_info::SUBSTRUCT:
-            push_object_internal(state, field->type, ptr);
-            get_object_ref_header(state, -1)->field_info = field;
+            push_object_internal(state, field.type, ptr);
+            get_object_ref_header(state, -1)->field_info = &field;
             return;
 
         case struct_field_info::POINTER:
-            push_adhoc_pointer(state, ptr, field->type);
+            push_adhoc_pointer(state, ptr, field.type);
             return;
 
         case struct_field_info::OBJ_METHOD:
@@ -564,9 +564,9 @@ static void field_reference(lua_State *state, const struct_field_info *field, vo
     lua_pushnil(state);
 }
 
-static void write_field(lua_State *state, const struct_field_info *field, void *ptr, int value_idx)
+static void write_field(lua_State *state, const struct_field_info_int& field, void *ptr, int value_idx)
 {
-    switch (field->mode)
+    switch (field.mode)
     {
         case struct_field_info::STATIC_STRING:
         {
@@ -574,7 +574,7 @@ static void write_field(lua_State *state, const struct_field_info *field, void *
             const char *str = lua_tolstring(state, value_idx, &size);
             if (!str)
                 field_error(state, 2, "string expected", "write");
-            memcpy(ptr, str, std::min(size+1, size_t(field->count)));
+            memcpy(ptr, str, std::min(size+1, size_t(field.count)));
             return;
         }
 
@@ -585,11 +585,11 @@ static void write_field(lua_State *state, const struct_field_info *field, void *
         case struct_field_info::PRIMITIVE:
         case struct_field_info::SUBSTRUCT:
         case struct_field_info::CONTAINER:
-            field->type->lua_write(state, 2, ptr, value_idx);
+            field.type->lua_write(state, 2, ptr, value_idx);
             return;
 
         case struct_field_info::POINTER:
-            df::pointer_identity::lua_write(state, 2, ptr, field->type, value_idx);
+            df::pointer_identity::lua_write(state, 2, ptr, field.type, value_idx);
             return;
 
         case struct_field_info::STATIC_ARRAY:
@@ -600,7 +600,7 @@ static void write_field(lua_State *state, const struct_field_info *field, void *
             lua_call(state, 2, 0);
             return;
 
-        case struct_field_info::END:
+        case struct_field_info::END: // should not be possible
             return;
     }
 }
@@ -611,18 +611,18 @@ static void write_field(lua_State *state, const struct_field_info *field, void *
 static int meta_struct_index(lua_State *state)
 {
     uint8_t *ptr = get_object_addr(state, 1, 2, "read");
-    auto field = (struct_field_info*)find_field(state, 2, "read");
+    auto field = (struct_field_info_int*)find_field(state, 2, "read");
     if (!field)
         return 1;
-    read_field(state, field, ptr + field->offset);
+    read_field(state, *field, ptr + field->offset);
     if (field->mode == struct_field_info::SUBSTRUCT || field->mode == struct_field_info::CONTAINER)
     {
         auto struct_type = (struct_identity*)get_object_identity(state, 1, "read", false);
-        if (auto tag_field = find_union_tag(struct_type, field))
+        if (auto tag_field = find_union_tag(struct_type, *field))
         {
             get_object_ref_header(state, -1)->tag_ptr = ptr + tag_field->offset;
             get_object_ref_header(state, -1)->tag_identity = tag_field->type;
-            get_object_ref_header(state, -1)->tag_attr = field->extra ? field->extra->union_tag_attr : nullptr;
+            get_object_ref_header(state, -1)->tag_attr = field->extra ? field->extra->union_tag_attr.c_str() : nullptr;
         }
     }
     return 1;
@@ -636,18 +636,18 @@ static int meta_struct_field_reference(lua_State *state)
     if (lua_gettop(state) != 2)
         luaL_error(state, "Usage: object:_field(name)");
     uint8_t *ptr = get_object_addr(state, 1, 2, "reference");
-    auto field = (struct_field_info*)find_field(state, 2, "reference");
+    auto field = (struct_field_info_int*)find_field(state, 2, "reference");
     if (!field)
         field_error(state, 2, "builtin property or method", "reference");
-    field_reference(state, field, ptr + field->offset);
+    field_reference(state, *field, ptr + field->offset);
     if (field->mode == struct_field_info::SUBSTRUCT || field->mode == struct_field_info::CONTAINER)
     {
         auto struct_type = (struct_identity*)get_object_identity(state, 1, "reference", false);
-        if (auto tag_field = find_union_tag(struct_type, field))
+        if (auto tag_field = find_union_tag(struct_type, *field))
         {
             get_object_ref_header(state, -1)->tag_ptr = ptr + tag_field->offset;
             get_object_ref_header(state, -1)->tag_identity = tag_field->type;
-            get_object_ref_header(state, -1)->tag_attr = field->extra ? field->extra->union_tag_attr : nullptr;
+            get_object_ref_header(state, -1)->tag_attr = field->extra ? field->extra->union_tag_attr.c_str() : nullptr;
         }
     }
     return 1;
@@ -660,13 +660,13 @@ static int meta_global_field_reference(lua_State *state)
 {
     if (lua_gettop(state) != 2)
         luaL_error(state, "Usage: object:_field(name)");
-    auto field = (struct_field_info*)find_field(state, 2, "reference");
+    auto field = (struct_field_info_int*)find_field(state, 2, "reference");
     if (!field)
         field_error(state, 2, "builtin property or method", "reference");
     void *ptr = *(void**)field->offset;
     if (!ptr)
         field_error(state, 2, "global address not known", "reference");
-    field_reference(state, field, *(void**)field->offset);
+    field_reference(state, *field, *(void**)field->offset);
     return 1;
 }
 
@@ -676,10 +676,10 @@ static int meta_global_field_reference(lua_State *state)
 static int meta_struct_newindex(lua_State *state)
 {
     uint8_t *ptr = get_object_addr(state, 1, 2, "write");
-    auto field = (struct_field_info*)find_field(state, 2, "write");
+    auto field = (struct_field_info_int*)find_field(state, 2, "write");
     if (!field)
         field_error(state, 2, "builtin property or method", "write");
-    write_field(state, field, ptr + field->offset, 3);
+    write_field(state, *field, ptr + field->offset, 3);
     return 0;
 }
 
@@ -735,14 +735,14 @@ static int meta_union_next(lua_State *state)
         const char *tag_name = nullptr;
         if (header->tag_attr)
         {
-            for (auto enum_field = enum_id->getAttrType()->getFields(); enum_field->mode != struct_field_info::END; enum_field++)
+            for (auto& enum_field : enum_id->getAttrType()->getFields())
             {
-                if (!strcmp(enum_field->name, header->tag_attr))
+                if (enum_field.name == header->tag_attr)
                 {
-                    if (enum_field->type == df::identity_traits<const char*>::get())
+                    if (*enum_field.type == *df::identity_traits<const char*>::get())
                     {
                         auto attrs = ((uint8_t*)enum_id->getAttrs()) + (tag_index * enum_id->getAttrType()->byte_size());
-                        tag_name = *(const char **)(attrs + enum_field->offset);
+                        tag_name = *(const char **)(attrs + enum_field.offset);
                     }
                     break;
                 }
@@ -809,7 +809,7 @@ static int meta_primitive_index(lua_State *state)
     {
         const char *attr = lua_tostring(state, -1);
         if (strcmp(attr, "ref_target") == 0) {
-            const struct_field_info *field_info = get_object_ref_header(state, 1)->field_info;
+            const struct_field_info_int *field_info = get_object_ref_header(state, 1)->field_info;
             if (field_info && field_info->extra && field_info->extra->ref_target) {
                 LookupInTable(state, const_cast<type_identity*>(field_info->extra->ref_target), &DFHACK_TYPEID_TABLE_TOKEN);
             } else {
@@ -1180,13 +1180,13 @@ static int meta_bitfield_next(lua_State *state)
  */
 static int meta_global_index(lua_State *state)
 {
-    auto field = (struct_field_info*)find_field(state, 2, "read");
+    auto field = (struct_field_info_int*)find_field(state, 2, "read");
     if (!field)
         return 1;
     void *ptr = *(void**)field->offset;
     if (!ptr)
         field_error(state, 2, "global address not known", "read");
-    read_field(state, field, ptr);
+    read_field(state, *field, ptr);
     return 1;
 }
 
@@ -1195,13 +1195,13 @@ static int meta_global_index(lua_State *state)
  */
 static int meta_global_newindex(lua_State *state)
 {
-    auto field = (struct_field_info*)find_field(state, 2, "write");
+    auto field = (struct_field_info_int*)find_field(state, 2, "write");
     if (!field)
         field_error(state, 2, "builtin property or method", "write");
     void *ptr = *(void**)field->offset;
     if (!ptr)
         field_error(state, 2, "global address not known", "write");
-    write_field(state, field, ptr, 3);
+    write_field(state, *field, ptr, 3);
     return 0;
 }
 
@@ -1262,7 +1262,7 @@ int Lua::CallWithCatch(lua_State *state, int (*fn)(lua_State*), const char *cont
  * Push a closure invoking the given function.
  */
 void LuaWrapper::PushFunctionWrapper(lua_State *state, int meta_idx,
-                                     const char *name, const function_identity_base *fun)
+                                     const std::string& name, const function_identity_base* fun)
 {
     lua_rawgetp(state, LUA_REGISTRYINDEX, &DFHACK_TYPETABLE_TOKEN);
     if (meta_idx)
@@ -1277,11 +1277,11 @@ void LuaWrapper::PushFunctionWrapper(lua_State *state, int meta_idx,
 /**
  * Create a closure invoking the given function, and add it to the field table.
  */
-static void AddMethodWrapper(lua_State *state, int meta_idx, int field_idx,
-                             const char *name, const function_identity_base *fun)
+static void AddMethodWrapper(lua_State* state, int meta_idx, int field_idx,
+    const std::string& name, const function_identity_base* fun)
 {
     PushFunctionWrapper(state, meta_idx, name, fun);
-    lua_setfield(state, field_idx, name);
+    lua_setfield(state, field_idx, name.c_str());
 }
 
 /**
@@ -1319,16 +1319,16 @@ static void IndexFields(lua_State *state, int base, const struct_identity *pstru
     if (pstruct->getParent())
         IndexFields(state, base, pstruct->getParent(), flags);
 
-    auto fields = pstruct->getFields();
-    if (!fields)
+    auto& fields = pstruct->getFields();
+    if (fields.empty())
         return;
 
     int cnt = lua_rawlen(state, base+3); // field iter table
 
-    for (int i = 0; fields[i].mode != struct_field_info::END; ++i)
+    for (auto& field : fields)
     {
         // Qualify conflicting field names with the type
-        std::string name = fields[i].name;
+        std::string name = field.name;
 
         lua_getfield(state, base+2, name.c_str());
         if (!lua_isnil(state, -1))
@@ -1339,11 +1339,11 @@ static void IndexFields(lua_State *state, int base, const struct_identity *pstru
 
         if (!(flags & IndexFieldsFlags::RAW))
         // Handle the field
-        switch (fields[i].mode)
+        switch (field.mode)
         {
         case struct_field_info::OBJ_METHOD:
             AddMethodWrapper(state, base+1, base+2, name.c_str(),
-                             (const function_identity_base*)fields[i].type);
+                             (const function_identity_base*)field.type);
             continue;
 
         case struct_field_info::CLASS_METHOD:
@@ -1351,7 +1351,7 @@ static void IndexFields(lua_State *state, int base, const struct_identity *pstru
 
         case struct_field_info::POINTER:
             // Skip potentially bad pointers
-            if ((fields[i].count & 2) != 0 && fields[i].type)
+            if ((field.count & 2) != 0 && field.type)
                 add_to_enum = false;
             break;
 
@@ -1360,13 +1360,13 @@ static void IndexFields(lua_State *state, int base, const struct_identity *pstru
         }
 
         // Do not add invalid globals to the enumeration order
-        if ((flags & IndexFieldsFlags::GLOBALS) && !*(void**)fields[i].offset)
+        if ((flags & IndexFieldsFlags::GLOBALS) && !*(void**)field.offset)
             add_to_enum = false;
 
         if (add_to_enum || (flags & IndexFieldsFlags::RAW))
             AssociateId(state, base+3, ++cnt, name.c_str());
 
-        lua_pushlightuserdata(state, (void*)&fields[i]);
+        lua_pushlightuserdata(state, (void*)&field);
         lua_setfield(state, base+2, name.c_str());
     }
 }
@@ -1378,7 +1378,7 @@ static void PushTypeIdentity(lua_State *state, const type_identity *id)
     lua_remove(state, -2);  // TYPEID_TABLE
 }
 
-static void PushFieldInfoSubTable(lua_State *state, const struct_field_info *field)
+static void PushFieldInfoSubTable(lua_State *state, const struct_field_info_int *field)
 {
     if (!field) {
         lua_pushnil(state);
@@ -1410,13 +1410,13 @@ static void PushFieldInfoSubTable(lua_State *state, const struct_field_info *fie
             PushTypeIdentity(state, field->extra->ref_target);
             lua_setfield(state, -2, "ref_target");
         }
-        if (field->extra->union_tag_field) {
+        if (!field->extra->union_tag_field.empty()) {
             Lua::TableInsert(state, "union_tag_field", field->extra->union_tag_field);
         }
-        if (field->extra->union_tag_attr) {
+        if (!field->extra->union_tag_attr.empty()) {
             Lua::TableInsert(state, "union_tag_attr", field->extra->union_tag_attr);
         }
-        if (field->extra->original_name) {
+        if (!field->extra->original_name.empty()) {
             Lua::TableInsert(state, "original_name", field->extra->original_name);
         }
     }
@@ -1432,7 +1432,7 @@ static int meta_fieldinfo_index(lua_State *state)
     luaL_checktype(state, -1, LUA_TSTRING);
 
     lua_gettable(state, lua_upvalueindex(1));
-    auto field = static_cast<const struct_field_info*>(lua_touserdata(state, -1));
+    auto field = static_cast<const struct_field_info_int*>(lua_touserdata(state, -1));
     lua_pop(state, 1);
     PushFieldInfoSubTable(state, field);
 
@@ -1460,7 +1460,7 @@ static int meta_fieldinfo_next(lua_State *state)
     // retrieve the struct_field_info* from the table and convert it
     lua_dup(state);
     lua_gettable(state, lua_upvalueindex(1));
-    auto field = static_cast<const struct_field_info*>(lua_touserdata(state, -1));
+    auto field = static_cast<const struct_field_info_int*>(lua_touserdata(state, -1));
     lua_pop(state, 1);
     PushFieldInfoSubTable(state, field);
 
@@ -1516,7 +1516,7 @@ static void AddFieldInfoTable(lua_State *state, int ftable_idx, struct_identity 
     // convert field info table (struct_field_info) to field table (lua tables)
     lua_pushnil(state);  // initial key for next()
     while (lua_next(state, ix_fieldinfo)) {
-        auto field = static_cast<const struct_field_info*>(lua_touserdata(state, -1));
+        auto field = static_cast<const struct_field_info_int*>(lua_touserdata(state, -1));
         lua_pushvalue(state, -2);  // field name
         PushFieldInfoSubTable(state, field);
         lua_settable(state, ix_fields);
@@ -1536,16 +1536,16 @@ void LuaWrapper::IndexStatics(lua_State *state, int meta_idx, int ftable_idx, st
     for (const struct_identity *p = pstruct; p; p = p->getParent())
     {
         auto fields = p->getFields();
-        if (!fields)
+        if (fields.empty())
             continue;
 
-        for (int i = 0; fields[i].mode != struct_field_info::END; ++i)
+        for (auto& field : fields)
         {
-            switch (fields[i].mode)
+            switch (field.mode)
             {
             case struct_field_info::CLASS_METHOD:
-                AddMethodWrapper(state, meta_idx, ftable_idx, fields[i].name,
-                                 (const function_identity_base*)fields[i].type);
+                AddMethodWrapper(state, meta_idx, ftable_idx, field.name,
+                                 (const function_identity_base*)field.type);
                 break;
 
             default:
@@ -1766,43 +1766,43 @@ void global_identity::build_metatable(lua_State *state) const
  * Construct a metatable for an object type folded into the field descriptor.
  * This is done to reduce compile-time symbol table bloat due to templates.
  */
-static void GetAdHocMetatable(lua_State *state, const struct_field_info *field)
+static void GetAdHocMetatable(lua_State *state, const struct_field_info_int& field)
 {
-    lua_pushlightuserdata(state, (void*)field);
+    lua_pushlightuserdata(state, (void*)&field);
 
     if (!LookupTypeInfo(state, true))
     {
-        switch (field->mode)
+        switch (field.mode)
         {
         case struct_field_info::CONTAINER:
         {
-            auto ctype = (container_identity*)field->type;
-            MakeContainerMetatable(state, ctype, ctype->getItemType(), -1, field->extra ? field->extra->index_enum : nullptr);
+            auto ctype = (container_identity*)field.type;
+            MakeContainerMetatable(state, ctype, ctype->getItemType(), -1, field.extra ? field.extra->index_enum : nullptr);
             break;
         }
 
         case struct_field_info::STATIC_STRING:
             MakeContainerMetatable(state, &df::buffer_container_identity::base_instance,
-                                   &df::identity_traits<char>::identity, field->count, NULL);
+                                   &df::identity_traits<char>::identity, field.count, NULL);
             break;
 
         case struct_field_info::STATIC_ARRAY:
             MakeContainerMetatable(state, &df::buffer_container_identity::base_instance,
-                                   field->type, field->count, field->extra ? field->extra->index_enum : nullptr);
+                                   field.type, field.count, field.extra ? field.extra->index_enum : nullptr);
             break;
 
         case struct_field_info::STL_VECTOR_PTR:
             MakeContainerMetatable(state, &df::identity_traits<std::vector<void*> >::identity,
-                                   field->type, -1, field->extra ? field->extra->index_enum : nullptr);
+                                   field.type, -1, field.extra ? field.extra->index_enum : nullptr);
             break;
 
         default:
-            luaL_error(state, "Invalid ad-hoc field: %d", field->mode);
+            luaL_error(state, "Invalid ad-hoc field: %d", field.mode);
         }
 
         lua_pop(state, 1);
 
-        SaveTypeInfo(state, (void*)field);
+        SaveTypeInfo(state, (void*)&field);
     }
 }
 

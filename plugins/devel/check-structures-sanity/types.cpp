@@ -31,63 +31,63 @@ CheckedStructure::CheckedStructure(const type_identity *identity, size_t count, 
     inside_structure(inside_structure)
 {
 }
-CheckedStructure::CheckedStructure(const struct_field_info *field) :
+CheckedStructure::CheckedStructure(const struct_field_info_int& field) :
     CheckedStructure()
 {
-    if (!field || field->mode == struct_field_info::END)
+    if (field.mode == struct_field_info::END)
     {
         UNEXPECTED;
     }
 
-    identity = field->type;
-    eid = field->extra ? field->extra->index_enum : nullptr;
+    identity = field.type;
+    eid = field.extra ? field.extra->index_enum : nullptr;
     inside_structure = true;
-    switch (field->mode)
+    switch (field.mode)
     {
         case struct_field_info::END:
             UNEXPECTED;
             break;
         case struct_field_info::PRIMITIVE:
-            if (field->count || !field->type)
+            if (field.count || !field.type)
             {
                 UNEXPECTED;
             }
             break;
         case struct_field_info::STATIC_STRING:
-            if (!field->count || field->type)
+            if (!field.count || field.type)
             {
                 UNEXPECTED;
             }
             identity = df::identity_traits<char>::get();
-            count = field->count;
+            count = field.count;
             break;
         case struct_field_info::POINTER:
-            if (field->count & PTRFLAG_IS_ARRAY)
+            if (field.count & PTRFLAG_IS_ARRAY)
             {
                 ptr_is_array = true;
             }
-            identity = Checker::wrap_in_pointer(field->type);
+            identity = Checker::wrap_in_pointer(field.type);
             break;
         case struct_field_info::STATIC_ARRAY:
-            if (!field->count || !field->type)
+            if (!field.count || !field.type)
             {
                 UNEXPECTED;
             }
-            count = field->count;
+            count = field.count;
             break;
         case struct_field_info::SUBSTRUCT:
         case struct_field_info::CONTAINER:
-            if (field->count || !field->type)
+            if (field.count || !field.type)
             {
                 UNEXPECTED;
             }
             break;
         case struct_field_info::STL_VECTOR_PTR:
-            if (field->count)
+            if (field.count)
             {
                 UNEXPECTED;
             }
-            identity = Checker::wrap_in_stl_ptr_vector(field->type);
+            identity = Checker::wrap_in_stl_ptr_vector(field.type);
             break;
         case struct_field_info::OBJ_METHOD:
         case struct_field_info::CLASS_METHOD:
@@ -134,19 +134,19 @@ bool CheckedStructure::has_type_at_offset(const CheckedStructure & type, size_t 
 
     for (auto p = st; p; p = p->getParent())
     {
-        auto fields = p->getFields();
-        if (!fields)
+        auto& fields = p->getFields();
+        if (fields.empty())
             continue;
 
-        for (auto field = fields; field->mode != struct_field_info::END; field++)
+        for (auto& field : fields)
         {
-            if (field->mode == struct_field_info::OBJ_METHOD || field->mode == struct_field_info::CLASS_METHOD)
+            if (field.mode == struct_field_info::OBJ_METHOD || field.mode == struct_field_info::CLASS_METHOD)
                 continue;
 
-            if (field->offset > offset)
+            if (field.offset > offset)
                 continue;
 
-            if (CheckedStructure(field).has_type_at_offset(type, offset - field->offset))
+            if (CheckedStructure(field).has_type_at_offset(type, offset - field.offset))
                 return true;
         }
     }

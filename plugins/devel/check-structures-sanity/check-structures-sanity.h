@@ -41,7 +41,7 @@ struct CheckedStructure
     CheckedStructure();
     explicit CheckedStructure(const type_identity *, size_t = 0);
     CheckedStructure(const type_identity *, size_t, const enum_identity *, bool);
-    CheckedStructure(const struct_field_info *);
+    CheckedStructure(const struct_field_info_int&);
 
     size_t full_size() const;
     bool has_type_at_offset(const CheckedStructure &, size_t) const;
@@ -119,7 +119,7 @@ public:
 #endif
     static const std::optional<const char *const> get_enum_item_key(const enum_identity *identity, int64_t value);
     static const std::optional<size_t> get_enum_index(const enum_identity* identity, int64_t value);
-    static const char *const *get_enum_item_attr_or_key(const enum_identity *identity, int64_t value, const char *attr_name);
+    static const char *const *get_enum_item_attr_or_key(const enum_identity *identity, int64_t value, const std::string& attr_name);
 
 private:
     color_ostream & fail(int, const QueueItem &, const CheckedStructure &);
@@ -133,12 +133,12 @@ private:
     void dispatch_bitfield(const QueueItem &, const CheckedStructure &);
     void dispatch_enum(const QueueItem &, const CheckedStructure &);
     void dispatch_struct(const QueueItem &, const CheckedStructure &);
-    void dispatch_field(const QueueItem &, const CheckedStructure &, const struct_identity *, const struct_field_info *);
+    void dispatch_field(const QueueItem &, const CheckedStructure &, const struct_identity *, const struct_field_info_int&);
     void dispatch_class(const QueueItem &, const CheckedStructure &);
     void dispatch_buffer(const QueueItem &, const CheckedStructure &);
     void dispatch_stl_ptr_vector(const QueueItem &, const CheckedStructure &);
-    void dispatch_tagged_union(const QueueItem &, const QueueItem &, const CheckedStructure &, const CheckedStructure &, const char *);
-    void dispatch_tagged_union_vector(const QueueItem &, const QueueItem &, const CheckedStructure &, const CheckedStructure &, const char *);
+    void dispatch_tagged_union(const QueueItem &, const QueueItem &, const CheckedStructure &, const CheckedStructure &, const std::string&);
+    void dispatch_tagged_union_vector(const QueueItem &, const QueueItem &, const CheckedStructure &, const CheckedStructure &, const std::string&);
     void dispatch_untagged_union(const QueueItem &, const CheckedStructure &);
     void check_unknown_pointer(const QueueItem &);
     void check_stl_vector(const QueueItem &, const type_identity *, const type_identity *);

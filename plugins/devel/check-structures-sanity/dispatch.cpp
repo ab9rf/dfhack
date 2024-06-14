@@ -106,19 +106,19 @@ bool Checker::queue_item(const QueueItem & item, CheckedStructure cs)
 
 void Checker::queue_globals()
 {
-    auto fields = df::global::_identity.getFields();
-    for (auto field = fields; field->mode != struct_field_info::END; field++)
+    auto& fields = df::global::_identity.getFields();
+    for (auto& field : fields)
     {
-        if (!field->offset)
+        if (!field.offset)
         {
             UNEXPECTED;
             continue;
         }
 
         // offset is the position of the DFHack pointer to this global.
-        auto ptr = *reinterpret_cast<const void **>(field->offset);
+        auto ptr = *reinterpret_cast<const void **>(field.offset);
 
-        QueueItem item(stl_sprintf("df.global.%s", field->name), ptr);
+        QueueItem item(stl_sprintf("df.global.%s", field.name.c_str()), ptr);
         CheckedStructure cs(field);
 
         if (!ptr)
@@ -127,7 +127,7 @@ void Checker::queue_globals()
             continue;
         }
 
-        if (!strcmp(field->name, "enabler"))
+        if (field.name == "enabler")
         {
             // don't care about libgraphics as we have the source code
             continue;
@@ -531,28 +531,28 @@ void Checker::dispatch_struct(const QueueItem & item, const CheckedStructure & c
     auto identity = static_cast<const struct_identity *>(cs.identity);
     for (auto p = identity; p; p = p->getParent())
     {
-        auto fields = p->getFields();
-        if (!fields)
+        auto& fields = p->getFields();
+        if (fields.empty())
         {
             continue;
         }
 
-        for (auto field = fields; field->mode != struct_field_info::END; field++)
+        for (auto& field : fields)
         {
             dispatch_field(item, cs, identity, field);
         }
     }
 }
-void Checker::dispatch_field(const QueueItem & item, const CheckedStructure & cs, const struct_identity *identity, const struct_field_info *field)
+void Checker::dispatch_field(const QueueItem & item, const CheckedStructure & cs, const struct_identity *identity, const struct_field_info_int& field)
 {
-    if (field->mode == struct_field_info::OBJ_METHOD ||
-        field->mode == struct_field_info::CLASS_METHOD)
+    if (field.mode == struct_field_info::OBJ_METHOD ||
+        field.mode == struct_field_info::CLASS_METHOD)
     {
         return;
     }
 
-    auto field_ptr = PTR_ADD(item.ptr, field->offset);
-    QueueItem field_item(item, field->name, field_ptr);
+    auto field_ptr = PTR_ADD(item.ptr, field.offset);
+    QueueItem field_item(item, field.name, field_ptr);
     CheckedStructure field_cs(field);
 
     auto tag_field = find_union_tag(identity, field);
@@ -560,8 +560,8 @@ void Checker::dispatch_field(const QueueItem & item, const CheckedStructure & cs
     {
         auto tag_ptr = PTR_ADD(item.ptr, tag_field->offset);
         QueueItem tag_item(item, tag_field->name, tag_ptr);
-        CheckedStructure tag_cs(tag_field);
-        auto attr_name = field->extra ? field->extra->union_tag_attr : nullptr;
+        CheckedStructure tag_cs(*tag_field);
+        auto& attr_name = field.extra ? field.extra->union_tag_attr : std::string{};
         if (tag_cs.identity->isContainer())
         {
             dispatch_tagged_union_vector(field_item, tag_item, field_cs, tag_cs, attr_name);
@@ -619,7 +619,7 @@ void Checker::dispatch_stl_ptr_vector(const QueueItem & item, const CheckedStruc
     auto ptr_type = wrap_in_pointer(identity->getItemType());
     check_stl_vector(item, ptr_type, identity->getIndexEnumType());
 }
-void Checker::dispatch_tagged_union(const QueueItem & item, const QueueItem & tag_item, const CheckedStructure & cs, const CheckedStructure & tag_cs, const char *attr_name)
+void Checker::dispatch_tagged_union(const QueueItem & item, const QueueItem & tag_item, const CheckedStructure & cs, const CheckedStructure & tag_cs, const std::string& attr_name)
 {
     if (tag_cs.identity->type() != IDTYPE_ENUM || cs.identity->type() != IDTYPE_UNION)
     {
@@ -694,19 +694,19 @@ void Checker::dispatch_tagged_union(const QueueItem & item, const QueueItem & ta
         return;
     }
 
-    for (auto field = union_type->getFields(); field->mode != struct_field_info::END; field++)
+    for (auto& field : union_type->getFields())
     {
-        if (strcmp(field->name, *tag_name))
+        if (field.name != *tag_name)
         {
             continue;
         }
 
-        if (field->offset != 0)
+        if (field.offset != 0)
         {
             UNEXPECTED;
         }
 
-        dispatch_item(QueueItem(item, field->name, item.ptr), field);
+        dispatch_item(QueueItem(item, field.name, item.ptr), field);
         return;
     }
 
@@ -718,7 +718,7 @@ void Checker::dispatch_tagged_union(const QueueItem & item, const QueueItem & ta
 
     FAIL("tagged union missing " << *tag_name << " field to match tag (accessed as " << tag_item.path << ") value (" << tag_value << ")");
 }
-void Checker::dispatch_tagged_union_vector(const QueueItem & item, const QueueItem & tag_item, const CheckedStructure & cs, const CheckedStructure & tag_cs, const char *attr_name)
+void Checker::dispatch_tagged_union_vector(const QueueItem & item, const QueueItem & tag_item, const CheckedStructure & cs, const CheckedStructure & tag_cs, const std::string& attr_name)
 {
     auto union_container_identity = static_cast<const container_identity *>(cs.identity);
     CheckedStructure union_item_cs(union_container_identity->getItemType());

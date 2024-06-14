@@ -3448,14 +3448,14 @@ static int internal_setAddress(lua_State *L)
     // Set the address
     Core::getInstance().vinfo->setAddress(name, addr);
 
-    auto fields = df::global::_identity.getFields();
+    auto& fields = df::global::_identity.getFields();
 
-    for (int i = 0; fields && fields[i].mode != struct_field_info::END; ++i)
+    for (auto& field : fields)
     {
-        if (fields[i].name != name)
+        if (field.name != name)
             continue;
 
-        *(void**)fields[i].offset = (void*)addr;
+        *(void**)field.offset = (void*)addr;
     }
 
     // Print via printerr, so that it is definitely logged to stderr.log.

@@ -208,18 +208,18 @@ namespace DFHack
         int size;
     };
 
-    struct bitfield_info {
+    struct bitfield_item_info_int {
         std::vector<bitfield_item_info> bits;
 
-        bitfield_info(const bitfield_info& b) : bits(b.bits) {};
-        bitfield_info(const std::vector<bitfield_item_info> bits) : bits(bits) {};
-        bitfield_info(int num_bits, const bitfield_item_info* bits_) : bits({}) {
+        bitfield_item_info_int(const bitfield_item_info_int& b) : bits(b.bits) {};
+        bitfield_item_info_int(const std::vector<bitfield_item_info> bits) : bits(bits) {};
+        bitfield_item_info_int(int num_bits, const bitfield_item_info* bits_) : bits({}) {
             std::copy(bits_, bits_+num_bits, std::back_inserter(bits));
         }
     };
 
     class DFHACK_EXPORT bitfield_identity : public compound_identity {
-        const bitfield_info bits;
+        const bitfield_item_info_int bits;
 
     protected:
         virtual bool can_allocate() const { return true; }
@@ -231,11 +231,11 @@ namespace DFHack
         bitfield_identity(const std::type_info& id, size_t size,
             const compound_identity* scope_parent, const char* dfhack_name,
             int num_bits, const bitfield_item_info* bits)
-            : bitfield_identity(id, size, scope_parent, dfhack_name, bitfield_info{ num_bits, bits }) {};
+            : bitfield_identity(id, size, scope_parent, dfhack_name, bitfield_item_info_int{ num_bits, bits }) {};
 
         bitfield_identity(const std::type_info& id, size_t size,
             const compound_identity* scope_parent, const char* dfhack_name,
-            bitfield_info bits);
+            bitfield_item_info_int bits);
 
         virtual std::unique_ptr<const type_identity> clone() const override {
             return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
@@ -349,6 +349,22 @@ namespace DFHack
         const char *original_name;
     };
 
+    struct struct_field_info_extra_int {
+        const enum_identity* index_enum;
+        const type_identity* ref_target;
+        std::string union_tag_field;
+        std::string union_tag_attr;
+        std::string original_name;
+
+        struct_field_info_extra_int(const struct_field_info_extra& i)
+            : index_enum(i.index_enum)
+            , ref_target(i.ref_target)
+            , union_tag_field(i.union_tag_field ? std::string{ i.union_tag_field } : std::string{})
+            , union_tag_attr(i.union_tag_attr ? std::string{ i.union_tag_attr } : std::string{})
+            , original_name(i.original_name ? std::string{ i.original_name } : std::string{})
+            {};
+    };
+
     struct struct_field_info {
         enum Mode {
             END,
@@ -370,12 +386,31 @@ namespace DFHack
         const struct_field_info_extra *extra;
     };
 
+    struct struct_field_info_int {
+        struct_field_info::Mode mode;
+        std::string name;
+        size_t offset;
+        const type_identity* type;
+        size_t count;
+        std::optional<struct_field_info_extra_int> extra;
+
+        struct_field_info_int(const struct_field_info& i)
+            : mode(i.mode)
+            , name(i.name)
+            , offset(i.offset)
+            , type(i.type)
+            , count(i.count)
+            , extra(i.extra ? std::optional<struct_field_info_extra_int>(*(i.extra)) : std::nullopt)
+            {};
+
+    };
+
     class DFHACK_EXPORT struct_identity : public compound_identity {
         mutable struct_identity *parent;
         mutable std::vector<const struct_identity*> children;
         bool has_children;
 
-        const struct_field_info *fields;
+        std::vector<struct_field_info_int> fields;
 
     protected:
         virtual void doInit(Core *core);
@@ -394,12 +429,16 @@ namespace DFHack
         const std::vector<const struct_identity*> &getChildren() const { return children; }
         bool hasChildren() const { return has_children; }
 
-        const struct_field_info *getFields() const { return fields; }
+        const std::vector<struct_field_info_int>& getFields() const { return fields; }
 
         bool is_subclass(const struct_identity *subtype) const;
 
         virtual void build_metatable(lua_State *state) const;
     };
+
+    ///
+    /// global_identity
+    ///
 
     class DFHACK_EXPORT global_identity : public struct_identity {
         // this class exists solely to give global_identity a type it can use as a type id
@@ -978,7 +1017,7 @@ namespace DFHack {
      * As a special case, a container-type union can have a tag field that is
      * a bit vector if it has exactly two members.
      */
-    DFHACK_EXPORT const struct_field_info *find_union_tag(const struct_identity *structure, const struct_field_info *union_field);
+    DFHACK_EXPORT const std::optional<const struct_field_info_int> find_union_tag(const struct_identity *structure, const struct_field_info_int &union_field);
 }
 
 #define ENUM_ATTR(enum,attr,val) (df::enum_traits<df::enum>::attrs(val).attr)

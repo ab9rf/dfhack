@@ -9,11 +9,11 @@
 
 bool Checker::is_in_global(const QueueItem & item)
 {
-    auto fields = df::global::_identity.getFields();
-    for (auto field = fields; field->mode != struct_field_info::END; field++)
+    auto& fields = df::global::_identity.getFields();
+    for (auto& field : fields)
     {
         size_t size = CheckedStructure(field).full_size();
-        auto start = *reinterpret_cast<const void * const*>(field->offset);
+        auto start = *reinterpret_cast<const void * const*>(field.offset);
         auto offset = uintptr_t(item.ptr) - uintptr_t(start);
         if (offset < size)
         {
@@ -419,7 +419,7 @@ const std::optional<size_t> Checker::get_enum_index(const enum_identity* identit
     return { index };
 }
 
-const char *const *Checker::get_enum_item_attr_or_key(const enum_identity *identity, int64_t value, const char *attr_name)
+const char* const* Checker::get_enum_item_attr_or_key(const enum_identity* identity, int64_t value, const std::string& attr_name)
 {
     auto index = Checker::get_enum_index(identity, value);
 
@@ -433,11 +433,11 @@ const char *const *Checker::get_enum_item_attr_or_key(const enum_identity *ident
     }
 
     attrs = PTR_ADD(attrs, attr_type->byte_size() * *index);
-    for (auto field = attr_type->getFields(); field->mode != struct_field_info::END; field++)
+    for (auto& field : attr_type->getFields())
     {
-        if (!strcmp(field->name, attr_name))
+        if (field.name == attr_name)
         {
-            return reinterpret_cast<const char *const *>(PTR_ADD(attrs, field->offset));
+            return reinterpret_cast<const char *const *>(PTR_ADD(attrs, field.offset));
         }
     }
 

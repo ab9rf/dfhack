@@ -126,7 +126,7 @@ namespace LuaWrapper {
      */
     struct DFRefHeader {
         void *ptr;
-        const struct_field_info *field_info;
+        const struct_field_info_int *field_info;
         const void *tag_ptr;
         const type_identity *tag_identity;
         const char *tag_attr;
@@ -226,7 +226,7 @@ namespace LuaWrapper {
      * Push a closure invoking the given function.
      */
     void PushFunctionWrapper(lua_State *state, int meta_idx,
-                             const char *name, const function_identity_base *fun);
+                             const std::string& name, const function_identity_base *fun);
 
     /**
      * Wrap functions and add them to the table on the top of the stack.
