@@ -167,14 +167,14 @@ namespace DFHack
         static compound_identity *list;
         mutable compound_identity *next;
 
-        const char *dfhack_name;
+        const std::string dfhack_name;
         mutable compound_identity *scope_parent;
         mutable std::vector<const compound_identity*> scope_children;
         static std::vector<const compound_identity*> top_scope;
 
     protected:
         compound_identity(const std::type_index id, size_t size, TAllocateFn alloc,
-            const compound_identity *scope_parent, const char *dfhack_name);
+            const compound_identity *scope_parent, const std::string& dfhack_name);
 
         compound_identity(const std::type_info& id, size_t size, TAllocateFn alloc,
             const compound_identity* scope_parent, const char* dfhack_name) :
@@ -183,7 +183,7 @@ namespace DFHack
         virtual void doInit(Core *core);
 
     public:
-        const char *getName() const { return dfhack_name; }
+        const std::string& getName() const { return dfhack_name; }
 
         virtual const std::string getFullName() const;
 
@@ -281,14 +281,16 @@ namespace DFHack
         const void *attrs;
         const struct_identity *attr_type;
 
+        // fieldwise copy constructor
         enum_identity(const std::type_index id, size_t size,
-            const compound_identity* scope_parent, const char* dfhack_name,
+            const compound_identity* scope_parent, const std::string& dfhack_name,
             const type_identity* base_type,
             int64_t first_item_value, int64_t last_item_value,
             std::vector<std::string> keys,
             std::optional<ComplexData> complex,
             const void* attrs, const struct_identity* attr_type, int count);
 
+        // codegen initializer
         enum_identity(const std::type_index id, size_t size,
             const compound_identity* scope_parent, const char* dfhack_name,
             const type_identity* base_type,
@@ -456,6 +458,10 @@ namespace DFHack
         virtual void build_metatable(lua_State *state) const;
     };
 
+    ///
+    /// union_identity
+    ///
+
     class DFHACK_EXPORT union_identity : public struct_identity {
     public:
         union_identity(const std::type_info& id, size_t size, TAllocateFn alloc,
@@ -492,6 +498,10 @@ namespace DFHack
         virtual void build_metatable(lua_State *state) const;
     };
 
+    ///
+    /// virtual_identity
+    ///
+
 #ifdef _MSC_VER
     typedef void *virtual_ptr;
 #else
@@ -504,7 +514,7 @@ namespace DFHack
     class DFHACK_EXPORT virtual_identity : public struct_identity {
         static std::map<void*, virtual_identity*> known;
 
-        const char *original_name;
+        const std::string original_name;
 
         mutable void *vtable_ptr;
 
@@ -536,7 +546,7 @@ namespace DFHack
 
         virtual identity_type type() const { return IDTYPE_CLASS; }
 
-        const char *getOriginalName() const { return original_name ? original_name : getName(); }
+        const std::string &getOriginalName() const { return !original_name.empty() ? original_name : getName(); }
 
     public:
         static virtual_identity *get(virtual_ptr instance_ptr);

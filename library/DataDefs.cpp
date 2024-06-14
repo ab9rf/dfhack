@@ -111,12 +111,10 @@ const type_identity* type_identity::canonicalize() const
         auto copy = this->clone();
         canon = copy.get();
         canon->canon = canon;
-        std::cerr << "notice: " << this->getFullName() << " (" << this << ") canonicalized as " << canon << std::endl;
         canonical_map[canon] = std::move(copy);
     }
     else
     {
-        std::cerr << "notice: " << this->getFullName() << " (" << this << ") canonicalized as " << canon << " (previous canonicalization)" << std::endl;
         canon = item->second.get();
     }
 
@@ -140,7 +138,7 @@ compound_identity *compound_identity::list = NULL;
 std::vector<const compound_identity*> compound_identity::top_scope;
 
 compound_identity::compound_identity(const std::type_index id, size_t size, TAllocateFn alloc,
-    const compound_identity* scope_parent, const char* dfhack_name)
+    const compound_identity* scope_parent, const std::string& dfhack_name)
     : constructed_identity(id, size, alloc), dfhack_name(dfhack_name), scope_parent(const_cast<compound_identity*>(scope_parent))
 {
     next = list; list = this;
@@ -197,7 +195,6 @@ void compound_identity::Init(Core *core)
     {
         auto p = list;
         list = list->next;
-        std::cerr << "initializing " << p->getFullName() << std::endl;
         p->doInit(core);
     }
 
@@ -237,7 +234,7 @@ enum_identity::enum_identity(const std::type_index id, size_t size,
 }
 
 enum_identity::enum_identity(const std::type_index id, size_t size,
-    const compound_identity* scope_parent, const char* dfhack_name,
+    const compound_identity* scope_parent, const std::string& dfhack_name,
     const type_identity* base_type,
     int64_t first_item_value, int64_t last_item_value,
     std::vector<std::string> keys,
@@ -335,7 +332,7 @@ virtual_identity::virtual_identity(const std::type_info& id, size_t size, const 
                                    const char *dfhack_name, const char *original_name,
                                    const virtual_identity *parent, const struct_field_info *fields,
                                    bool is_plugin)
-    : struct_identity(id, size, alloc, NULL, dfhack_name, parent, fields), original_name(original_name),
+    : struct_identity(id, size, alloc, NULL, dfhack_name, parent, fields), original_name(original_name ? std::string{ original_name } : std::string{}),
       vtable_ptr(NULL), is_plugin(is_plugin)
 {
     // Plugins are initialized after Init was called, so they need to be added to the name table here
@@ -452,7 +449,7 @@ void virtual_identity::adjust_vtable(virtual_ptr obj, const virtual_identity *ma
         return;
 
     std::cerr << "Attempt to create class '" << getName() << "' without known vtable." << std::endl;
-    throw DFHack::Error::VTableMissing(getName());
+    throw DFHack::Error::VTableMissing(getName().c_str());
 }
 
 virtual_ptr virtual_identity::clone(virtual_ptr obj)

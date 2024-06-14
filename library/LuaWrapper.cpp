@@ -1592,7 +1592,7 @@ static void FillBitfieldKeys(lua_State *state, int ix_meta, int ftable, bitfield
 
 static void RenderType(lua_State *state, const compound_identity *node)
 {
-    assert(node->getName());
+    assert(!node->getName().empty());
     std::string name = node->getFullName();
 
     // Frame:
@@ -1720,7 +1720,7 @@ static void RenderTypeChildren(lua_State *state, const std::vector<const compoun
     for (size_t i = 0; i < children.size(); i++)
     {
         RenderType(state, children[i]);
-        lua_pushstring(state, children[i]->getName());
+        lua_pushstring(state, children[i]->getName().c_str());
         lua_swap(state);
 
         // save in both tables

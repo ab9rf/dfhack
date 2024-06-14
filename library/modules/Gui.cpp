@@ -133,14 +133,14 @@ static df::layer_object_listst *getLayerList(df::viewscreen_layer *layer, int id
 }
 */
 
-static std::string getNameChunk(virtual_identity *id, int start, int end)
+static std::string getNameChunk(const virtual_identity *id, int start, int end)
 {
     if (!id)
         return "UNKNOWN";
-    const char *name = id->getName();
-    int len = strlen(name);
+    const std::string& name = id->getName();
+    int len = name.size();
     if (len > start + end)
-        return std::string(name+start, len-start-end);
+        return name.substr(start, len-start-end);
     else
         return name;
 }
