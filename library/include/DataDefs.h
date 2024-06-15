@@ -84,13 +84,14 @@ namespace DFHack
     ///
 
     class DFHACK_EXPORT type_identity {
+        static type_identity* list;
+        mutable type_identity* next;
         size_t size;
         std::type_index id;
-        mutable const type_identity* canon = nullptr; // memoization
 
     protected:
         type_identity(const std::type_info& id, size_t size) : id(std::type_index{ id }), size(size) {};
-        type_identity(const std::type_index id, size_t size) : id(id), size(size) {};
+        type_identity(const std::type_index id, size_t size);
 
         void *do_allocate_pod() const;
         void do_copy_pod(void *tgt, const void *src) const;
@@ -101,12 +102,13 @@ namespace DFHack
         virtual bool do_copy(void *tgt, const void *src) const { do_copy_pod(tgt, src); return true; }
         virtual bool do_destroy(void *obj) const { return do_destroy_pod(obj); }
         virtual std::unique_ptr<const type_identity> clone() const = 0;
+        virtual void doInit(Core* core);
+
+        mutable const type_identity* canon = nullptr; // memoization
 
     public:
         virtual ~type_identity() {}
         bool operator==(const type_identity& rhs) const = default;
-
-        virtual const type_identity* canonicalize() const;
 
         virtual size_t byte_size() const { return size; }
 
@@ -131,6 +133,11 @@ namespace DFHack
         void *allocate() const;
         bool copy(void* tgt, const void* src) const;
         bool destroy(void *obj) const;
+
+        template <typename T>
+        static const T* canonicalize(const T* in);
+
+        static void Init(Core* core);
     };
 
     ///
@@ -164,9 +171,6 @@ namespace DFHack
     ///
 
     class DFHACK_EXPORT compound_identity : public constructed_identity {
-        static compound_identity *list;
-        mutable compound_identity *next;
-
         const std::string dfhack_name;
         mutable compound_identity *scope_parent;
         mutable std::vector<const compound_identity*> scope_children;
@@ -180,7 +184,7 @@ namespace DFHack
             const compound_identity* scope_parent, const char* dfhack_name) :
             compound_identity(std::type_index{ id }, size, alloc, scope_parent, dfhack_name) {};
 
-        virtual void doInit(Core *core);
+        virtual void doInit(Core *core) override;
 
     public:
         const std::string& getName() const { return dfhack_name; }
@@ -191,7 +195,6 @@ namespace DFHack
         const std::vector<const compound_identity*> &getScopeChildren() const { return scope_children; }
         static const std::vector<const compound_identity*> &getTopScope() { return top_scope; }
 
-        static void Init(Core *core);
     };
 
     ///
@@ -275,10 +278,8 @@ namespace DFHack
         int64_t first_item_value;
         int64_t last_item_value;
         int count;
-
         const type_identity *base_type;
-
-        const void *attrs;
+        const void *attrs; // FIXME unowned
         const struct_identity *attr_type;
 
         // fieldwise copy constructor
@@ -415,7 +416,7 @@ namespace DFHack
         std::vector<struct_field_info_int> fields;
 
     protected:
-        virtual void doInit(Core *core);
+        virtual void doInit(Core* core) override;
         virtual std::unique_ptr<const type_identity> clone() const override {
             return std::make_unique<const std::remove_pointer_t<decltype(this)>>(*this);
         }

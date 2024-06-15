@@ -1144,7 +1144,12 @@ void LuaWrapper::MakeMetatable(lua_State *state, const type_identity *type, cons
     int base = lua_gettop(state);
     lua_newtable(state); // metatable
 
-    type = type->canonicalize();
+    auto ctype = type_identity::canonicalize(type);
+    if (type != ctype)
+    {
+        std::cerr << "notice: " << type->getFullName() << " (" << type << ") canonicalized to " << ctype << " in MakeMetatable" << std::endl;
+        type = ctype;
+    }
 
     lua_pushstring(state, type->getFullName().c_str());
     lua_setfield(state, base+1, "__metatable");

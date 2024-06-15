@@ -46,6 +46,51 @@ using namespace DFHack;
 // set to false during static initialization, set to true once identity system is
 // fully initialized
 constinit static bool identities_initialized = false;
+constinit static std::mutex* known_mutex = nullptr;
+
+/* The order of global object constructor calls is
+ * undefined between compilation units. Therefore,
+ * this list has to be plain data, so that it gets
+ * initialized by the loader in the initial mmap.
+ */
+type_identity* type_identity::list = NULL;
+
+void type_identity::Init(Core* core)
+{
+    if (!known_mutex)
+        known_mutex = new std::mutex();
+
+
+
+    // This cannot be done in the constructors, because
+    // they are called in an undefined order.
+    while (list != nullptr)
+    {
+        auto p = list;
+        list = list->next;
+        p->doInit(core);
+    }
+
+    assert(list == nullptr);
+    identities_initialized = true;
+}
+
+void type_identity::doInit(Core* core)
+{
+    auto canon = type_identity::canonicalize(this);
+    assert(canon != nullptr);
+    assert(*canon == *this);
+}
+
+type_identity::type_identity(const std::type_index id, size_t size) : id(id), size(size)
+{
+    next = list; list = this;
+
+    if (identities_initialized) {
+        // FIXME: crashes when initializing a struct_identity coming from a plugin, for unclear reasons
+        // Init(&Core::getInstance());
+    }
+}
 
 void *type_identity::do_allocate_pod() const {
     size_t sz = byte_size();
@@ -98,27 +143,50 @@ struct identity_hashcomp
     }
 };
 
-static std::unordered_map<const type_identity*, std::unique_ptr<const type_identity>, identity_hashcomp, identity_hashcomp> canonical_map{};
+typedef std::unordered_set<const type_identity*, identity_hashcomp, identity_hashcomp> canonical_set_type;
 
-const type_identity* type_identity::canonicalize() const
+static canonical_set_type canonical_set;
+static std::vector<std::unique_ptr<const type_identity> > canon_copies;
+
+template <typename T>
+const T* type_identity::canonicalize(const T* in)
 {
-    if (this->canon)
-        return this->canon;
+    if (!in)
+        return nullptr;
 
-    auto item = canonical_map.find(this);
-    if (item == canonical_map.end())
+    if (!identities_initialized)
     {
-        auto copy = this->clone();
-        canon = copy.get();
+        // cannot memorialize canonicalize during static initialization
+        in->canon = in;
+        return in;
+    }
+
+    const T* canon = dynamic_cast<const T*> (in->canon);
+
+    if (canon)
+        return canon;
+
+    auto& set = canonical_set;
+    auto item = set.find(in);
+    if (item == set.end())
+    {
+        auto copy = in->clone();
+        canon = dynamic_cast<const T*>(copy.get());
+
         canon->canon = canon;
-        canonical_map[canon] = std::move(copy);
+        in->canon = canon;
+
+        set.insert(canon);
+        canon_copies.push_back(std::move(copy));
     }
     else
     {
-        canon = item->second.get();
+        canon = dynamic_cast<const T*> (*item);
     }
 
-    assert(*this == *canon);
+    assert(*in == *canon);
+    in->canon = canon;
+
     return canon;
 }
 
@@ -129,36 +197,25 @@ void *enum_identity::do_allocate() const {
     return p;
 }
 
-/* The order of global object constructor calls is
- * undefined between compilation units. Therefore,
- * this list has to be plain data, so that it gets
- * initialized by the loader in the initial mmap.
- */
-compound_identity *compound_identity::list = NULL;
 std::vector<const compound_identity*> compound_identity::top_scope;
 
 compound_identity::compound_identity(const std::type_index id, size_t size, TAllocateFn alloc,
     const compound_identity* scope_parent, const std::string& dfhack_name)
-    : constructed_identity(id, size, alloc), dfhack_name(dfhack_name), scope_parent(const_cast<compound_identity*>(scope_parent))
+    : constructed_identity(id, size, alloc), dfhack_name(dfhack_name),
+    scope_parent(const_cast<compound_identity*>(canonicalize(scope_parent)))
 {
-    next = list; list = this;
-    if (identities_initialized) {
-        // FIXME: crashes when initializing a struct_identity coming from a plugin, for unclear reasons
-        // Init(&Core::getInstance());
-    }
 }
 
-void compound_identity::doInit(Core *)
+void compound_identity::doInit(Core * c)
 {
-    auto canon = dynamic_cast<const compound_identity*>(canonicalize());
-    assert(canon != nullptr);
-    assert(*canon == *this);
+    type_identity::doInit(c);
 
-    auto type = this;
+    auto type = dynamic_cast<const compound_identity*>(canon);
     auto cmp_fn = [type](auto t) { return *t == *type; };
 
     if (scope_parent)
     {
+//        scope_parent = const_cast<compound_identity*>(dynamic_cast<const compound_identity*>(scope_parent->canonicalize()));
         if (std::ranges::count_if(scope_parent->scope_children, cmp_fn) > 0)
             std::cerr << "duplicate push to scope_children : " << type->get_typeid().name() << std::endl;
         else
@@ -181,26 +238,6 @@ const std::string compound_identity::getFullName() const
         return getName();
 }
 
-
-constinit static std::mutex *known_mutex = nullptr;
-
-void compound_identity::Init(Core *core)
-{
-    if (!known_mutex)
-        known_mutex = new std::mutex();
-
-    // This cannot be done in the constructors, because
-    // they are called in an undefined order.
-    while (list != nullptr)
-    {
-        auto p = list;
-        list = list->next;
-        p->doInit(core);
-    }
-
-    assert(list == nullptr);
-    identities_initialized = true;
-}
 
 bitfield_identity::bitfield_identity(const std::type_info& id, size_t size,
                                      const compound_identity *scope_parent, const char *dfhack_name,
