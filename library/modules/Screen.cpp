@@ -98,6 +98,14 @@ df::coord2d Screen::getMousePixels()
     return df::coord2d(gps->precise_mouse_x, gps->precise_mouse_y);
 }
 
+// returns ui grid coordinates for the given window pixel position
+df::coord2d Screen::getPosFromPixels(int32_t px, int32_t py)
+{
+    if (!gps || gps->tile_pixel_x <= 0 || gps->tile_pixel_y <= 0)
+        return df::coord2d(-1, -1);
+    return df::coord2d(px / gps->tile_pixel_x, py / gps->tile_pixel_y);
+}
+
 df::coord2d Screen::getWindowSize()
 {
     if (!gps) return df::coord2d(80, 25);

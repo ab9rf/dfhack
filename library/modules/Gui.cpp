@@ -3008,14 +3008,34 @@ df::coord Gui::getMousePos(bool allow_out_of_bounds)
 {
     df::coord pos;
     if (gps && gps->precise_mouse_x > -1) {
+        if (Screen::inGraphicsMode())
+            return getMapPosFromPixels(gps->precise_mouse_x, gps->precise_mouse_y, allow_out_of_bounds);
+        pos = getViewportPos();
+        pos.x += gps->mouse_x;
+        pos.y += gps->mouse_y;
+    }
+    if (!allow_out_of_bounds && !Maps::isValidTilePos(pos.x, pos.y, pos.z))
+        return df::coord();
+    return pos;
+}
+
+// returns the map coordinates under the given window pixel position
+df::coord Gui::getMapPosFromPixels(int32_t px, int32_t py, bool allow_out_of_bounds)
+{
+    df::coord pos;
+    if (gps) {
         pos = getViewportPos();
         if (Screen::inGraphicsMode()) {
             int32_t map_tile_pixels = gps->viewport_zoom_factor / 4;
-            pos.x += gps->precise_mouse_x / map_tile_pixels;
-            pos.y += gps->precise_mouse_y / map_tile_pixels;
+            if (map_tile_pixels <= 0)
+                return df::coord();
+            pos.x += px / map_tile_pixels;
+            pos.y += py / map_tile_pixels;
         } else {
-            pos.x += gps->mouse_x;
-            pos.y += gps->mouse_y;
+            if (gps->tile_pixel_x <= 0 || gps->tile_pixel_y <= 0)
+                return df::coord();
+            pos.x += px / gps->tile_pixel_x;
+            pos.y += py / gps->tile_pixel_y;
         }
     }
     if (!allow_out_of_bounds && !Maps::isValidTilePos(pos.x, pos.y, pos.z))

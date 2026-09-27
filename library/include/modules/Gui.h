@@ -167,6 +167,8 @@ namespace DFHack
         DFHACK_EXPORT df::coord getViewportPos();
         DFHACK_EXPORT df::coord getCursorPos();
         DFHACK_EXPORT df::coord getMousePos(bool allow_out_of_bounds = false);
+        /// Returns the map coordinates under the given window pixel position
+        DFHACK_EXPORT df::coord getMapPosFromPixels(int32_t px, int32_t py, bool allow_out_of_bounds = false);
 
         static const int AREA_MAP_WIDTH = 23;
         static const int MENU_WIDTH = 30;

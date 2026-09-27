@@ -1371,6 +1371,16 @@ Announcements
   allow the function to return coordinates outside of the map, set
   ``allow_out_of_bounds`` to ``true``.
 
+* ``dfhack.gui.getMapPosFromPixels(px, py[, allow_out_of_bounds])``
+
+  Returns the map coordinates of the map tile under the given window pixel
+  position as a table of ``{x, y, z}``, with ``0,0`` being the upper left
+  corner of the window. If the position is not over a valid tile, returns
+  ``nil``. To allow the function to return coordinates outside of the map,
+  set ``allow_out_of_bounds`` to ``true``. See
+  ``dfhack.screen.getMousePixels()`` for an example of a source of window
+  pixel positions.
+
 Other
 ~~~~~
 
@@ -3064,6 +3074,14 @@ Functions:
 
   Returns *x,y* of the screen coordinates the mouse is over in pixels, with the
   upper left corner being ``0,0``.
+
+* ``dfhack.screen.getPosFromPixels(px, py)``
+
+  Returns *x,y* of the UI interface tile under the given window pixel position,
+  with the upper left corner being ``0,0``. This performs the same conversion
+  that the game applies to the mouse position; to get the map tile
+  coordinate at a window pixel position, see
+  ``dfhack.gui.getMapPosFromPixels()``.
 
 * ``dfhack.screen.inGraphicsMode()``
 

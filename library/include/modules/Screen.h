@@ -184,6 +184,8 @@ namespace DFHack
         DFHACK_EXPORT df::coord2d getMousePos();
         DFHACK_EXPORT df::coord2d getMousePixels();
         DFHACK_EXPORT df::coord2d getWindowSize();
+        /// Returns the ui grid coordinates that the given window pixel position is over
+        DFHACK_EXPORT df::coord2d getPosFromPixels(int32_t px, int32_t py);
 
         inline rect2d getScreenRect() {
             return rect2d(df::coord2d(0,0), getWindowSize()-df::coord2d(1,1));

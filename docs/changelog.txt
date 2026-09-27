@@ -147,6 +147,7 @@ Template for new versions:
 - Added ``Maps::forEachTile`` with ``Maps::TileFilter``/``Maps::TileActions`` to scan a cuboid of tiles, matching tiles by tiletype, tiletype attributes, and designation/occupancy bits, and counting, rewriting tiletypes, editing designation/occupancy bits, spawning constructions, or invoking a callback on matching tiles
 - Added ``MiscUtils::print_range`` to print ranges with prefix, separator, and suffix
 - Added ``Units::breathes`` and ``Units::getBreathingState``
+- Added ``Screen::getPosFromPixels`` and ``Gui::getMapPosFromPixels`` to translate arbitrary window pixel coordinates to UI grid tiles and map tiles, respectively
 - Deprecated ``World::ReadCurrentWeather`` in favor of ``Maps::getCurrentWeather``
 
 ## Lua
@@ -154,6 +155,7 @@ Template for new versions:
 - Added ``dfhack.maps.getTileBlockCoord``, ``dfhack.maps.getBlockOrigin``, and ``dfhack.maps.getTileBlockOffset`` to convert between tile and block coordinates
 - ``widgets.Slider`` and ``widgets.RangeSlider``: fix sliders allowing values outside their number of stops (``num_stops``) when clicked or dragged with the mouse
 - Fixed ``ipairs()`` on enum attribute tables (e.g. ``df.item_type.attrs``) never terminating (issue #1860)
+- Added ``dfhack.screen.getPosFromPixels`` and ``dfhack.gui.getMapPosFromPixels`` to translate arbitrary window pixel coordinates to UI grid tiles and map tiles, respectively
 
 ## Removed
 

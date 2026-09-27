@@ -1474,6 +1474,19 @@ static int gui_getMousePos(lua_State *L)
     return 1;
 }
 
+static int gui_getMapPosFromPixels(lua_State *L)
+{
+    int32_t px = luaL_checkint(L, 1);
+    int32_t py = luaL_checkint(L, 2);
+    bool allow_out_of_bounds = lua_toboolean(L, 3);
+    df::coord pos = Gui::getMapPosFromPixels(px, py, allow_out_of_bounds);
+    if ((allow_out_of_bounds && pos.z >= 0) || pos.isValid())
+        Lua::Push(L, pos);
+    else
+        lua_pushnil(L);
+    return 1;
+}
+
 static const LuaWrapper::FunctionReg dfhack_gui_module[] = {
     WRAPN(addCombatReport, (bool (*)(df::unit *, df::unit_report_type, int, bool))Gui::addCombatReport),
     WRAPN(addCombatReportAuto, (bool (*)(df::unit *, df::announcement_flags, int))Gui::addCombatReportAuto),
@@ -1887,6 +1900,7 @@ static const luaL_Reg dfhack_gui_funcs[] = {
     { "pauseRecenter", gui_pauseRecenter },
     { "revealInDwarfmodeMap", gui_revealInDwarfmodeMap },
     { "getMousePos", gui_getMousePos },
+    { "getMapPosFromPixels", gui_getMapPosFromPixels },
     { "getFocusStrings", gui_getFocusStrings },
     { "getCurFocus", gui_getCurFocus },
     { "getWidget", gui_getWidget },
@@ -3405,6 +3419,13 @@ static int screen_getWindowSize(lua_State *L)
     return Lua::PushPosXY(L, Screen::getWindowSize());
 }
 
+static int screen_getPosFromPixels(lua_State *L)
+{
+    int32_t px = luaL_checkint(L, 1);
+    int32_t py = luaL_checkint(L, 2);
+    return Lua::PushPosXY(L, Screen::getPosFromPixels(px, py));
+}
+
 static int screen_paintTile(lua_State *L)
 {
     Pen pen;
@@ -3648,6 +3669,7 @@ static const luaL_Reg dfhack_screen_funcs[] = {
     { "getMousePos", screen_getMousePos },
     { "getMousePixels", screen_getMousePixels },
     { "getWindowSize", screen_getWindowSize },
+    { "getPosFromPixels", screen_getPosFromPixels },
     { "paintTile", screen_paintTile },
     { "readTile", screen_readTile },
     { "paintMapPortTile", screen_paintMapPortTile },
